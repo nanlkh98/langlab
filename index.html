@@ -1,0 +1,1703 @@
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg: #f2ede5;
+  --card: #ffffff;
+  --navy: #1c2b4a;
+  --navy2: #263556;
+  --amber: #f0a320;
+  --amber-dark: #d48c18;
+  --zh: #c0392b;
+  --ja: #6d28d9;
+  --en: #1d4ed8;
+  --green: #15803d;
+  --red: #b91c1c;
+  --gray: #5e6e82;
+  --border: #ddd5c4;
+  --r: 14px;
+  --shadow: 0 2px 14px rgba(28,43,74,0.08);
+  --shadow-md: 0 4px 24px rgba(28,43,74,0.13);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); min-height:100vh; color:var(--navy); }
+#root { min-height:100vh; }
+
+/* HEADER */
+.header {
+  background:var(--navy);
+  color:white;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 24px;
+  position:sticky;
+  top:0;
+  z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,0.15);
+}
+.logo { font-family:'Poppins',sans-serif; font-size:1.35rem; font-weight:800; letter-spacing:-0.5px; }
+.logo span { color:var(--amber); }
+.header-right { display:flex; align-items:center; gap:10px; }
+
+/* SCREEN WRAPPER */
+.screen { max-width:960px; margin:0 auto; padding:28px 20px 60px; }
+
+/* HOME */
+.home-hero { text-align:center; padding:52px 20px 40px; }
+.home-hero h1 {
+  font-family:'Poppins',sans-serif;
+  font-size:2.6rem; font-weight:800;
+  color:var(--navy); line-height:1.15;
+  margin-bottom:12px;
+}
+.home-hero h1 span { color:var(--amber); }
+.home-hero p { color:var(--gray); font-size:1rem; margin-bottom:40px; }
+.lang-flags { font-size:2rem; margin-bottom:28px; letter-spacing:8px; }
+.mode-cards { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:460px; margin:0 auto; }
+.mode-card {
+  background:var(--card);
+  border:2.5px solid transparent;
+  border-radius:20px;
+  padding:36px 20px;
+  cursor:pointer;
+  text-align:center;
+  box-shadow:var(--shadow);
+  transition:all .2s ease;
+}
+.mode-card:hover { border-color:var(--amber); transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.mode-card .icon { font-size:2.8rem; margin-bottom:14px; }
+.mode-card h3 { font-size:1.1rem; font-weight:700; color:var(--navy); margin-bottom:4px; }
+.mode-card p { font-size:0.78rem; color:var(--gray); }
+
+/* GENERIC SECTION TITLE */
+.section-title {
+  font-size:1rem; font-weight:700; color:var(--navy);
+  margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+
+/* BTN GRID */
+.btn-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:12px; margin-bottom:24px; }
+.btn-card {
+  background:var(--card);
+  border:2px solid var(--border);
+  border-radius:var(--r);
+  padding:18px 12px;
+  cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:0.9rem; font-weight:500;
+  color:var(--navy); text-align:center;
+  transition:all .15s; box-shadow:var(--shadow);
+}
+.btn-card:hover { border-color:var(--amber); background:#fff9ee; transform:translateY(-2px); }
+
+/* LANGUAGE GRID */
+.lang-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+.lang-card {
+  border-radius:var(--r);
+  padding:24px 16px;
+  cursor:pointer; text-align:center; color:white; font-weight:700;
+  transition:all .2s; box-shadow:var(--shadow);
+  border:3px solid transparent;
+}
+.lang-card.zh { background:var(--zh); }
+.lang-card.ja { background:var(--ja); }
+.lang-card.en { background:var(--en); }
+.lang-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.lang-card.selected { border-color:var(--amber); box-shadow:0 0 0 4px rgba(240,163,32,0.25); }
+.lang-card .flag { font-size:2.2rem; margin-bottom:8px; }
+.lang-card .name { font-size:0.9rem; opacity:.9; }
+
+/* EXERCISE GRID */
+.ex-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.ex-card {
+  background:var(--card);
+  border:2px solid var(--border);
+  border-radius:var(--r);
+  padding:22px 16px; cursor:pointer;
+  text-align:center; transition:all .15s; box-shadow:var(--shadow);
+}
+.ex-card:hover { border-color:var(--amber); transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.ex-card .icon { font-size:2.2rem; margin-bottom:10px; }
+.ex-card .name { font-weight:700; font-size:0.95rem; color:var(--navy); }
+.ex-card .desc { font-size:0.75rem; color:var(--gray); margin-top:5px; }
+
+/* BREADCRUMB */
+.breadcrumb {
+  display:flex; align-items:center; gap:6px;
+  font-size:0.83rem; color:var(--gray);
+  margin-bottom:22px; flex-wrap:wrap;
+}
+.breadcrumb .link { color:var(--amber); font-weight:600; cursor:pointer; }
+.breadcrumb .link:hover { text-decoration:underline; }
+
+/* BUTTONS */
+.btn {
+  padding:10px 20px; border:none; border-radius:10px;
+  cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  font-size:0.9rem; font-weight:600; transition:all .15s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-primary { background:var(--amber); color:white; }
+.btn-primary:hover { background:var(--amber-dark); }
+.btn-danger { background:var(--red); color:white; }
+.btn-danger:hover { background:#991b1b; }
+.btn-outline { background:transparent; border:2px solid var(--border); color:var(--navy); }
+.btn-outline:hover { border-color:var(--navy); background:#f8f4ef; }
+.btn-navy { background:var(--navy); color:white; }
+.btn-navy:hover { background:var(--navy2); }
+.btn-green { background:var(--green); color:white; }
+.btn-green:hover { background:#166534; }
+.btn-sm { padding:6px 14px; font-size:0.8rem; border-radius:8px; }
+.btn-xs { padding:4px 10px; font-size:0.75rem; border-radius:6px; }
+
+/* TEACHER */
+.teacher-header {
+  background:linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  color:white; padding:22px 24px; border-radius:20px;
+  margin-bottom:24px; display:flex; align-items:center;
+  justify-content:space-between; flex-wrap:wrap; gap:10px;
+}
+.teacher-header h2 { font-family:'Poppins',sans-serif; font-size:1.25rem; font-weight:800; }
+.teacher-header p { font-size:0.78rem; opacity:.7; margin-top:2px; }
+
+.tabs { display:flex; gap:4px; background:#ede7dc; border-radius:12px; padding:5px; margin-bottom:24px; }
+.tab {
+  flex:1; padding:10px 16px; border:none; border-radius:9px;
+  cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  font-size:0.85rem; font-weight:600; color:var(--gray);
+  background:transparent; transition:all .15s;
+}
+.tab.active { background:var(--navy); color:white; }
+
+/* FORMS */
+.form-card {
+  background:var(--card); border-radius:var(--r);
+  padding:22px; box-shadow:var(--shadow); margin-bottom:18px;
+}
+.form-card h3 {
+  font-size:0.95rem; font-weight:700; color:var(--navy);
+  margin-bottom:16px; padding-bottom:10px;
+  border-bottom:2px solid var(--bg);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; }
+.form-group { margin-bottom:12px; }
+.form-group label {
+  display:block; font-size:0.75rem; font-weight:700;
+  color:var(--gray); margin-bottom:6px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.form-group input,.form-group select,.form-group textarea {
+  width:100%; padding:10px 14px;
+  border:2px solid var(--border); border-radius:10px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:0.9rem; color:var(--navy);
+  background:var(--bg); transition:border-color .15s; outline:none;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus {
+  border-color:var(--amber); background:white;
+}
+.form-group small { display:block; font-size:0.73rem; color:var(--gray); margin-top:4px; }
+
+/* TABLES */
+.table-wrap { background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; margin-bottom:18px; }
+.table-wrap table { width:100%; border-collapse:collapse; }
+.table-wrap th {
+  background:#f0ebe2; padding:11px 16px; text-align:left;
+  font-size:0.75rem; font-weight:700; color:var(--gray);
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.table-wrap td { padding:11px 16px; border-top:1px solid var(--bg); font-size:0.88rem; }
+.table-wrap tr:hover td { background:#fffbf0; }
+
+/* BADGES */
+.badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:20px; font-size:0.72rem; font-weight:700; }
+.badge-zh { background:#fee2e2; color:var(--zh); }
+.badge-ja { background:#ede9fe; color:var(--ja); }
+.badge-en { background:#dbeafe; color:var(--en); }
+.badge-ok { background:#dcfce7; color:var(--green); }
+.badge-type { background:#f1f5f9; color:var(--gray); }
+
+/* EXERCISE AREA */
+.ex-area {
+  background:var(--card); border-radius:20px;
+  padding:28px; box-shadow:var(--shadow-md);
+  margin-bottom:20px;
+}
+.ex-progress {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:10px; font-size:0.83rem; color:var(--gray);
+}
+.progress-bar { height:6px; background:var(--bg); border-radius:3px; overflow:hidden; margin-bottom:24px; }
+.progress-fill { height:100%; background:var(--amber); border-radius:3px; transition:width .4s ease; }
+
+.ex-top { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px; }
+.audio-btn {
+  background:var(--navy); color:white; border:none;
+  border-radius:50%; width:42px; height:42px;
+  cursor:pointer; font-size:1.1rem;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s; flex-shrink:0;
+}
+.audio-btn:hover { background:var(--amber); }
+
+.pinyin-line { font-size:0.92rem; color:var(--zh); text-align:center; margin-bottom:4px; letter-spacing:1px; font-style:italic; }
+.meaning-line { font-size:0.85rem; color:var(--gray); text-align:center; margin-bottom:16px; }
+.content-display { font-size:1.9rem; font-weight:700; text-align:center; color:var(--navy); margin:8px 0 4px; line-height:1.4; }
+
+/* WORD ARRANGEMENT */
+.label-small { font-size:0.75rem; color:var(--gray); font-weight:600; margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
+.answer-area {
+  min-height:58px; border:2.5px dashed var(--border);
+  border-radius:12px; padding:10px 12px;
+  display:flex; flex-wrap:wrap; gap:8px;
+  margin-bottom:14px; transition:border-color .2s;
+  align-items:center;
+}
+.answer-area.active { border-color:var(--amber); }
+.word-bank {
+  display:flex; flex-wrap:wrap; gap:8px;
+  padding:12px; background:var(--bg); border-radius:12px;
+  min-height:52px; margin-bottom:16px; align-items:center;
+}
+.word-chip {
+  padding:8px 16px; background:var(--navy); color:white;
+  border-radius:9px; cursor:pointer; font-size:1rem; font-weight:500;
+  transition:all .15s; user-select:none; border:none;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.word-chip:hover { background:var(--amber); transform:translateY(-1px); }
+.word-chip.placed { background:var(--amber); }
+.placeholder-text { color:var(--border); font-size:0.83rem; }
+.ex-actions { display:flex; gap:10px; justify-content:center; margin-top:4px; }
+.result-area { margin-top:18px; text-align:center; }
+.result-correct { color:var(--green); font-size:1.3rem; font-weight:800; margin-bottom:8px; }
+.result-wrong { color:var(--red); font-size:1.2rem; font-weight:800; margin-bottom:6px; }
+.result-hint { color:var(--gray); font-size:0.88rem; margin-bottom:12px; }
+
+/* FILL BLANK */
+.blank-sentence {
+  font-size:1.5rem; text-align:center;
+  line-height:2.2; color:var(--navy);
+  margin:12px 0 8px;
+}
+.blank-input {
+  display:inline-block;
+  border:none; border-bottom:3.5px solid var(--amber);
+  min-width:90px; padding:0 6px;
+  font-size:1.3rem; font-weight:700;
+  color:var(--navy); text-align:center;
+  background:transparent; outline:none;
+  font-family:'Noto Sans KR',sans-serif;
+  transition:border-color .2s;
+}
+.blank-input:focus { border-bottom-color:var(--zh); }
+
+/* FLASHCARD */
+.fc-wrapper { perspective:1000px; height:220px; max-width:420px; margin:16px auto; }
+.fc { width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform .55s ease; cursor:pointer; }
+.fc.flipped { transform:rotateY(180deg); }
+.fc-face {
+  position:absolute; width:100%; height:100%;
+  backface-visibility:hidden; border-radius:18px;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:24px;
+}
+.fc-front { background:var(--navy); color:white; }
+.fc-back { background:var(--amber); color:white; transform:rotateY(180deg); }
+.fc-hint { font-size:0.78rem; opacity:.6; margin-top:10px; }
+.fc-btns { display:none; gap:12px; justify-content:center; margin-top:18px; }
+.fc-btns.show { display:flex; }
+
+/* DONE SCREEN */
+.done-card {
+  background:var(--card); border-radius:20px;
+  padding:40px 28px; text-align:center;
+  max-width:400px; margin:0 auto;
+  box-shadow:var(--shadow-md);
+}
+.done-pct {
+  font-family:'Poppins',sans-serif;
+  font-size:4rem; font-weight:800; line-height:1;
+  margin:12px 0 4px;
+}
+
+/* MODAL */
+.overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center; z-index:200;
+}
+.modal {
+  background:white; border-radius:20px;
+  padding:32px; width:320px; box-shadow:0 8px 40px rgba(0,0,0,.2);
+}
+.modal h3 { font-size:1.05rem; font-weight:700; color:var(--navy); margin-bottom:16px; }
+
+/* MEANING EXERCISE */
+.meaning-choices { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
+.meaning-choice {
+  width:100%; padding:14px 18px;
+  background:var(--bg); border:2.5px solid var(--border);
+  border-radius:12px; cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:1rem; font-weight:500; color:var(--navy);
+  text-align:left; transition:all .15s;
+  display:flex; align-items:center; gap:10px;
+}
+.meaning-choice:hover:not(:disabled) { border-color:var(--amber); background:#fffbf0; transform:translateX(3px); }
+.meaning-choice.correct { border-color:var(--green); background:#f0fdf4; color:var(--green); font-weight:700; }
+.meaning-choice.wrong   { border-color:var(--red);   background:#fff1f1; color:var(--red);   font-weight:700; }
+.meaning-choice:disabled { cursor:default; }
+.choice-num {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--border); color:var(--gray);
+  display:flex; align-items:center; justify-content:center;
+  font-size:.8rem; font-weight:700; flex-shrink:0;
+}
+.meaning-choice.correct .choice-num { background:var(--green); color:white; }
+.meaning-choice.wrong   .choice-num { background:var(--red);   color:white; }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:24px; right:24px;
+  background:var(--navy); color:white;
+  padding:12px 20px; border-radius:12px;
+  font-size:0.88rem; font-weight:500; z-index:300;
+  animation:toastIn .3s ease;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
+}
+.toast.ok { background:var(--green); }
+.toast.err { background:var(--red); }
+@keyframes toastIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+/* EMPTY */
+.empty { text-align:center; padding:44px 20px; color:var(--gray); }
+.empty .ico { font-size:3rem; margin-bottom:12px; }
+.empty p { font-size:0.88rem; }
+
+/* STUDENT CHIPS */
+.student-chip-area { display:flex; flex-wrap:wrap; gap:8px; }
+.student-chip {
+  display:flex; align-items:center; gap:6px;
+  background:var(--bg); padding:6px 12px;
+  border-radius:8px; font-size:0.83rem; font-weight:500;
+}
+.chip-del {
+  background:none; border:none; cursor:pointer;
+  color:var(--red); font-size:1.1rem; line-height:1;
+  padding:0 2px;
+}
+
+/* FILTER ROW */
+.filter-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.filter-btn {
+  padding:6px 14px; border-radius:8px; border:2px solid var(--border);
+  background:var(--card); cursor:pointer; font-family:'Noto Sans KR',sans-serif;
+  font-size:0.8rem; font-weight:600; color:var(--gray); transition:all .15s;
+}
+.filter-btn.active { border-color:var(--amber); background:var(--amber); color:white; }
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .lang-grid,.ex-grid { grid-template-columns:1fr; }
+  .mode-cards { grid-template-columns:1fr; }
+  .form-row { grid-template-columns:1fr; }
+  .content-display { font-size:1.4rem; }
+  .home-hero h1 { font-size:1.8rem; }
+  .done-pct { font-size:3rem; }
+  .tabs .tab { font-size:0.75rem; padding:8px 10px; }
+}
+</style>
+
+<div id="root"></div>
+<div id="modal-root"></div>
+
+<script>
+// ── STORAGE ──────────────────────────────────
+// ── FIREBASE INIT ─────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDOpE7rM1A31A569ZcZmcsVOIecUc--aUI",
+  authDomain: "hyomyung-langlab.firebaseapp.com",
+  projectId: "hyomyung-langlab",
+  storageBucket: "hyomyung-langlab.firebasestorage.app",
+  messagingSenderId: "100254086070",
+  appId: "1:100254086070:web:b957aa93d10bb13af9c717"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const Store = {
+  async get(k) {
+    try {
+      const snap = await db.collection('langlab').doc(k).get();
+      return snap.exists ? JSON.parse(snap.data().value) : null;
+    } catch(e) { console.error('FB get error:', e); return null; }
+  },
+  async set(k, v) {
+    try {
+      await db.collection('langlab').doc(k).set({ value: JSON.stringify(v) });
+    } catch(e) { console.error('FB set error:', e); }
+  }
+};
+
+// ── TTS ──────────────────────────────────────
+const LANG_CODE = { zh:'zh-CN', ja:'ja-JP', en:'en-US' };
+function speak(text, lang) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = LANG_CODE[lang] || 'ko-KR';
+  u.rate = 0.88;
+  window.speechSynthesis.speak(u);
+}
+function playAudio(data) { const a = new Audio(data); a.play(); }
+function playItem(item) {
+  if (!item) return;
+  item.audioData ? playAudio(item.audioData) : speak(item.text, item.language);
+}
+window._playItemById = (id) => { const item = DB.content[id]; if (item) playItem(item); };
+
+// ── DATABASE ──────────────────────────────────
+let DB = { classes:{}, content:{}, records:{}, pins:{}, units:{} };
+async function loadDB() {
+  DB.classes  = (await Store.get('classes'))  || {};
+  DB.content  = (await Store.get('content'))  || {};
+  DB.records  = (await Store.get('records'))  || {};
+  DB.pins     = (await Store.get('pins'))     || { zh:'1111', ja:'2222', en:'3333' };
+  DB.units    = (await Store.get('units'))    || {};
+}
+const saveClasses = () => Store.set('classes', DB.classes);
+const saveUnits   = () => Store.set('units',   DB.units);
+const saveContent = () => Store.set('content', DB.content);
+const saveRecords = () => Store.set('records', DB.records);
+const savePins    = () => Store.set('pins',    DB.pins);
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+// ── STATE ─────────────────────────────────────
+let S = {
+  view:'home',
+  teacherTab:'classes',
+  teacherLang:null,
+  teacherLangFilter:'all',
+  studentStep:'lang',
+  classId:null, studentId:null,
+  language:null, exType:null,
+  unitId:null,
+  recordUnitFilter:'__all__',
+  exItems:[], exIdx:0, exScore:0,
+  exAnswered:false,
+  waAnswer:[], waBank:[],
+  fbWords:[], fbBlankIdx:0, fbUserAnswer:'',
+  fcFlipped:false,
+};
+
+// ── NAVIGATE ─────────────────────────────────
+function nav(view, params={}) {
+  S.view = view;
+  Object.assign(S, params);
+  render();
+}
+window._nav = nav;
+
+// ── TOAST ─────────────────────────────────────
+function toast(msg, type='') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+// ── EXCEL ─────────────────────────────────────
+function parseExcelUpload(file, classId) {
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1 });
+      let added = 0;
+      rows.forEach((row, ri) => {
+        // Skip fully empty rows
+        if (!row[0] && !row[1] && !row[2]) return;
+        // Skip header row: if first cell is text like "학년/반", "번호", "이름", "name" etc.
+        const first = (row[0]||'').toString().trim();
+        if (ri === 0 && isNaN(parseInt(first)) && !/^\d/.test(first)) return;
+
+        let number = '', name = '';
+        const hasC = row[2] !== undefined && row[2] !== null && row[2].toString().trim() !== '';
+        const hasB = row[1] !== undefined && row[1] !== null && row[1].toString().trim() !== '';
+
+        let classGroup = '';
+        if (hasC) {
+          // 3-column format: A=학년/반, B=번호, C=이름
+          classGroup = row[0].toString().trim();
+          number = parseInt(row[1]) || '';
+          name   = row[2].toString().trim();
+        } else if (hasB) {
+          // 2-column format: A=번호, B=이름
+          number = parseInt(row[0]) || '';
+          name   = row[1].toString().trim();
+        } else {
+          // 1-column format: A=이름 only
+          name = first;
+        }
+
+        if (name) {
+          DB.classes[classId].students.push({ id:genId(), classGroup, number, name });
+          added++;
+        }
+      });
+      saveClasses().then(() => { toast(`${added}명 추가됨`, 'ok'); render(); });
+    } catch { toast('파일 파싱 오류', 'err'); }
+  };
+  r.readAsBinaryString(file);
+}
+
+// ── PINYIN MODAL ──────────────────────────────
+
+function showChangePinModal() {
+  const langName = {zh:'중국어',ja:'일본어',en:'영어'}[S.teacherLang];
+  document.getElementById('modal-root').innerHTML = `
+    <div class="overlay" id="pin-overlay">
+      <div class="modal">
+        <h3>🔑 ${langName} 교사 PIN 변경</h3>
+        <div class="form-group">
+          <label>현재 PIN</label>
+          <input type="password" id="pin-cur" placeholder="현재 PIN">
+        </div>
+        <div class="form-group">
+          <label>새 PIN</label>
+          <input type="password" id="pin-new" placeholder="새 PIN (숫자 4자리 권장)">
+        </div>
+        <div class="form-group">
+          <label>새 PIN 확인</label>
+          <input type="password" id="pin-new2" placeholder="새 PIN 재입력">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary" onclick="doChangePin()">변경</button>
+          <button class="btn btn-outline" onclick="closeModal()">취소</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('pin-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+}
+
+function doChangePin() {
+  const cur   = document.getElementById('pin-cur').value;
+  const nw    = document.getElementById('pin-new').value;
+  const nw2   = document.getElementById('pin-new2').value;
+  const correct = DB.pins[S.teacherLang] || {zh:'1111',ja:'2222',en:'3333'}[S.teacherLang];
+  if (cur !== correct) return toast('현재 PIN이 올바르지 않습니다', 'err');
+  if (!nw)             return toast('새 PIN을 입력하세요', 'err');
+  if (nw !== nw2)      return toast('새 PIN이 일치하지 않습니다', 'err');
+  DB.pins[S.teacherLang] = nw;
+  savePins().then(() => { closeModal(); toast('PIN이 변경되었습니다!', 'ok'); });
+}
+
+function showPinModal(selectedLang=null) {
+  const langInfo = {
+    zh: { flag:'🇨🇳', name:'중국어 교사', hint:'기본값: 1111' },
+    ja: { flag:'🇯🇵', name:'일본어 교사', hint:'기본값: 2222' },
+    en: { flag:'🇺🇸', name:'영어 교사',   hint:'기본값: 3333' },
+  };
+  document.getElementById('modal-root').innerHTML = `
+    <div class="overlay" id="pin-overlay">
+      <div class="modal">
+        <h3>👩‍🏫 교사 로그인</h3>
+        <div class="form-group">
+          <label>담당 언어 선택</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px">
+            ${['zh','ja','en'].map(l=>`
+              <div id="lang-btn-${l}" onclick="selectTeacherLang('${l}')"
+                style="border:2.5px solid ${selectedLang===l?'var(--amber)':'var(--border)'};
+                  border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;
+                  background:${selectedLang===l?'#fff8e6':'var(--bg)'};transition:all .15s">
+                <div style="font-size:1.4rem">${langInfo[l].flag}</div>
+                <div style="font-size:.75rem;font-weight:700;color:var(--navy);margin-top:4px">${langInfo[l].name}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div class="form-group">
+          <label id="pin-label">PIN ${selectedLang ? '('+langInfo[selectedLang].hint+')' : ''}</label>
+          <input type="password" id="pin-in" placeholder="PIN 입력"
+            onkeydown="if(event.key==='Enter')checkPin()" ${selectedLang?'':'disabled'}>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary" onclick="checkPin()" ${selectedLang?'':'disabled'}>확인</button>
+          <button class="btn btn-outline" onclick="closeModal()">취소</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('pin-overlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+  window._selectedTeacherLang = selectedLang;
+  if (selectedLang) document.getElementById('pin-in').focus();
+}
+
+function selectTeacherLang(lang) {
+  showPinModal(lang);
+}
+
+function checkPin() {
+  const lang = window._selectedTeacherLang;
+  if (!lang) return toast('언어를 먼저 선택하세요', 'err');
+  const val = document.getElementById('pin-in').value;
+  const correctPin = DB.pins[lang] || {zh:'1111',ja:'2222',en:'3333'}[lang];
+  if (val === correctPin) {
+    closeModal();
+    nav('teacher', { teacherTab:'classes', teacherLang:lang, teacherLangFilter:lang });
+  } else {
+    toast('PIN이 올바르지 않습니다', 'err');
+  }
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+// ═══════════════════════════════════════════════
+// RENDER ENGINE
+// ═══════════════════════════════════════════════
+function render() {
+  const root = document.getElementById('root');
+  let html = renderHeader();
+  if (S.view === 'home')    html += renderHome();
+  else if (S.view === 'teacher') html += renderTeacher();
+  else if (S.view === 'student') html += renderStudent();
+  root.innerHTML = html;
+  afterRender();
+}
+
+function renderHeader() {
+  const homeBtn = S.view !== 'home'
+    ? `<button class="btn btn-outline btn-sm" onclick="nav('home')" style="color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.3)">← 홈</button>`
+    : '';
+  return `<div class="header">
+    <div class="logo">Lang<span>Lab</span> <span style="font-size:.75rem;font-weight:400;opacity:.5;font-family:'Noto Sans KR'">외국어 학습</span></div>
+    <div class="header-right" style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:.75rem;color:rgba(255,255,255,.55);font-family:'Noto Sans KR';letter-spacing:-.2px">by 효명고 이경호 선생님</span>
+      ${homeBtn}
+    </div>
+  </div>`;
+}
+
+// ── HOME ──────────────────────────────────────
+function renderHome() {
+  return `<div class="screen">
+    <div class="home-hero">
+      <div class="lang-flags">🇨🇳🇯🇵🇺🇸</div>
+      <h1>외국어 학습<br><span>플랫폼</span></h1>
+      <p>중국어 · 일본어 · 영어 학습을 더 쉽고 재미있게</p>
+    </div>
+    <div class="mode-cards">
+      <div class="mode-card" onclick="nav('student',{studentStep:'lang',classId:null,studentId:null,language:null})">
+        <div class="icon">📚</div>
+        <h3>학생 입장</h3>
+        <p>학습 시작하기</p>
+      </div>
+      <div class="mode-card" onclick="showPinModal()">
+        <div class="icon">👩‍🏫</div>
+        <h3>교사 모드</h3>
+        <p>콘텐츠 및 반 관리</p>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;background:white;border-radius:18px;padding:22px 24px;box-shadow:var(--shadow);max-width:460px;margin-left:auto;margin-right:auto">
+      <div style="font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:6px">
+        🔗 다른 교사·학생과 공유하는 방법
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:.82rem;color:var(--gray)">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--amber);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+          <span>이 대화(채팅) 링크를 복사해서 공유 — 같은 링크로 접속하면 <strong>반·콘텐츠·기록이 모두 공유</strong>됩니다</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--amber);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+          <span>교사가 먼저 반과 콘텐츠를 설정 → 학생들에게 링크 전달</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="background:var(--navy);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">💡</span>
+          <span>교사 PIN은 <strong>1234</strong>로 고정 — 학생은 PIN 없이 이름만 클릭해서 입장</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── TEACHER ───────────────────────────────────
+function renderTeacher() {
+  const tabs = [
+    { id:'classes', label:'🏫 반 관리' },
+    { id:'units',   label:'📚 단원 관리' },
+    { id:'content', label:'📝 콘텐츠 관리' },
+    { id:'records', label:'📊 학습 기록' }
+  ];
+  let body = '';
+  if (S.teacherTab==='classes') body = renderClasses();
+  else if (S.teacherTab==='units')   body = renderUnits();
+  else if (S.teacherTab==='content') body = renderContent();
+  else body = renderRecords();
+
+  return `<div class="screen">
+    <div class="teacher-header">
+      <div>
+        <h2>${{zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.teacherLang]} 교사 대시보드</h2>
+        <p>담당 언어의 반과 콘텐츠를 관리하세요</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white;font-size:.75rem" onclick="showChangePinModal()">🔑 PIN 변경</button>
+      </div>
+    </div>
+    <div class="tabs">
+      ${tabs.map(t=>`<button class="tab ${S.teacherTab===t.id?'active':''}" onclick="nav('teacher',{teacherTab:'${t.id}'})">${t.label}</button>`).join('')}
+    </div>
+    ${body}
+  </div>`;
+}
+
+// Teacher → Classes
+function renderClasses() {
+  const classes = Object.values(DB.classes).filter(c => c.language === S.teacherLang);
+  return `
+    <div class="form-card">
+      <h3>새 반 만들기</h3>
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div class="form-group" style="flex:1;margin:0">
+          <label>반 이름</label>
+          <input id="new-cls" type="text" placeholder="예: 1반, A반, 고1-2반">
+        </div>
+        <button class="btn btn-primary" onclick="addClass()">추가</button>
+      </div>
+    </div>
+    ${classes.length===0
+      ? `<div class="empty"><div class="ico">🏫</div><p>반이 없습니다. 위에서 추가하세요.</p></div>`
+      : classes.map(cls => `
+        <div class="form-card">
+          <h3>
+            <span>🏫 ${cls.name} <span style="font-weight:400;color:var(--gray);font-size:.85rem">(${cls.students.length}명)</span></span>
+            <button class="btn btn-danger btn-xs" onclick="deleteClass('${cls.id}')">삭제</button>
+          </h3>
+          <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end">
+            <div class="form-group" style="width:72px;margin:0;flex-shrink:0">
+              <label>번호</label>
+              <input id="nn-${cls.id}" type="number" min="1" placeholder="1" onkeydown="if(event.key==='Enter')addStudent('${cls.id}')">
+            </div>
+            <div class="form-group" style="flex:1;margin:0;min-width:140px">
+              <label>이름</label>
+              <input id="ns-${cls.id}" type="text" placeholder="홍길동" onkeydown="if(event.key==='Enter')addStudent('${cls.id}')">
+            </div>
+            <button class="btn btn-navy btn-sm" onclick="addStudent('${cls.id}')">추가</button>
+            <label class="btn btn-outline btn-sm" style="cursor:pointer">
+              📂 엑셀 업로드
+              <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleXL(event,'${cls.id}')">
+            </label>
+          </div>
+          <small style="color:var(--gray);font-size:.72rem;display:block;margin-bottom:10px">엑셀 형식: <strong>A열 학년/반, B열 번호, C열 이름</strong> 또는 <strong>A열 번호, B열 이름</strong> 자동 감지 (제목 행 자동 무시)</small>
+          ${cls.students.length===0
+            ? `<p style="color:var(--gray);font-size:.83rem">학생이 없습니다.</p>`
+            : `<div class="student-chip-area">
+                ${cls.students.map(s=>`
+                  <div class="student-chip">
+                    ${s.classGroup ? `<span style="font-size:.72rem;font-weight:700;background:#e0e7ff;color:#3730a3;padding:1px 7px;border-radius:5px">${s.classGroup}</span>` : ''}
+                    <span style="color:var(--amber);font-size:.78rem;font-weight:700;min-width:20px">${s.number||''}</span>
+                    <span>👤 ${s.name}</span>
+                    <button class="chip-del" onclick="delStudent('${cls.id}','${s.id}')">×</button>
+                  </div>`).join('')}
+              </div>`}
+        </div>`).join('')}`;
+}
+
+function addClass() {
+  const el = document.getElementById('new-cls');
+  const name = el.value.trim();
+  if (!name) return toast('반 이름 입력 필요', 'err');
+  const id = genId();
+  DB.classes[id] = { id, name, language: S.teacherLang, students:[] };
+  saveClasses().then(()=>{ toast('반 추가!', 'ok'); render(); });
+}
+function deleteClass(id) {
+  if (!confirm('이 반을 삭제하시겠습니까?')) return;
+  delete DB.classes[id];
+  saveClasses().then(()=>{ toast('삭제됨'); render(); });
+}
+function addStudent(clsId) {
+  const nel = document.getElementById('nn-'+clsId);
+  const el  = document.getElementById('ns-'+clsId);
+  const number = nel ? parseInt(nel.value)||'' : '';
+  const name = el.value.trim();
+  if (!name) return toast('이름 입력 필요', 'err');
+  DB.classes[clsId].students.push({ id:genId(), number, name });
+  saveClasses().then(()=>{ toast(`${number ? number+'번 ' : ''}${name} 추가!`, 'ok'); render(); });
+}
+function delStudent(clsId, sId) {
+  DB.classes[clsId].students = DB.classes[clsId].students.filter(s=>s.id!==sId);
+  saveClasses().then(()=>render());
+}
+function handleXL(e, clsId) {
+  const f = e.target.files[0];
+  if (f) parseExcelUpload(f, clsId);
+}
+
+// Teacher → Units
+function renderUnits() {
+  const units = Object.values(DB.units)
+    .filter(u => u.language === S.teacherLang)
+    .sort((a,b) => (a.order||0)-(b.order||0));
+  const langLabel = {zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.teacherLang];
+  return `
+    <div class="form-card">
+      <h3>새 단원 만들기</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>단원 번호 (정렬 순서)</label>
+          <input id="u-order" type="number" min="1" placeholder="예: 1">
+        </div>
+        <div class="form-group">
+          <label>단원명</label>
+          <input id="u-name" type="text" placeholder="예: 1단원 자기소개" onkeydown="if(event.key==='Enter')addUnit()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>단원 설명 (선택)</label>
+        <input id="u-desc" type="text" placeholder="예: 이름, 나이, 국적 표현">
+      </div>
+      <button class="btn btn-primary" onclick="addUnit()">단원 추가</button>
+    </div>
+
+    <div class="section-title">등록된 단원 — ${langLabel}</div>
+    ${units.length === 0
+      ? `<div class="empty"><div class="ico">📚</div><p>단원이 없습니다. 위에서 추가하세요.</p></div>`
+      : units.map(u => {
+          const cnt = Object.values(DB.content).filter(c => c.unitId === u.id).length;
+          return `
+            <div class="form-card" style="border-left:4px solid var(--amber)">
+              <h3>
+                <span>
+                  <span style="background:var(--amber);color:white;border-radius:6px;padding:2px 10px;font-size:.8rem;margin-right:8px">${u.order||''}단원</span>
+                  ${u.name}
+                  <span style="font-weight:400;color:var(--gray);font-size:.82rem;margin-left:6px">(콘텐츠 ${cnt}개)</span>
+                </span>
+                <button class="btn btn-danger btn-xs" onclick="deleteUnit('${u.id}')">삭제</button>
+              </h3>
+              ${u.desc ? `<p style="color:var(--gray);font-size:.83rem;margin-bottom:0">${u.desc}</p>` : ''}
+            </div>`;
+        }).join('')}`;
+}
+
+function addUnit() {
+  const order = parseInt(document.getElementById('u-order').value) || 0;
+  const name  = document.getElementById('u-name').value.trim();
+  const desc  = document.getElementById('u-desc').value.trim();
+  if (!name) return toast('단원명을 입력하세요', 'err');
+  const id = genId();
+  DB.units[id] = { id, language: S.teacherLang, order, name, desc };
+  saveUnits().then(() => { toast('단원 추가!', 'ok'); render(); });
+}
+
+function deleteUnit(id) {
+  if (!confirm('단원을 삭제하면 해당 단원의 콘텐츠 연결이 해제됩니다. 삭제하시겠습니까?')) return;
+  // Detach content from this unit
+  Object.values(DB.content).forEach(c => { if (c.unitId === id) c.unitId = null; });
+  delete DB.units[id];
+  Promise.all([saveUnits(), saveContent()]).then(() => { toast('삭제됨'); render(); });
+}
+
+// Teacher → Content
+function renderContent() {
+  const LANG = {zh:'🇨🇳 중국어', ja:'🇯🇵 일본어', en:'🇺🇸 영어'};
+  const items = Object.values(DB.content).filter(c => c.language === S.teacherLang);
+  return `
+    <div class="form-card">
+      <h3>새 콘텐츠 추가</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>언어 (담당 언어 고정)</label>
+          <select id="cl" disabled style="opacity:.8;background:var(--bg)">
+            <option value="zh" ${S.teacherLang==='zh'?'selected':''}>🇨🇳 중국어</option>
+            <option value="ja" ${S.teacherLang==='ja'?'selected':''}>🇯🇵 일본어</option>
+            <option value="en" ${S.teacherLang==='en'?'selected':''}>🇺🇸 영어</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>유형</label>
+          <select id="ct">
+            <option value="sentence">문장</option>
+            <option value="vocabulary">단어/어휘</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>텍스트 <span style="font-weight:400;color:var(--gray)">(중국어는 비워도 됨 → 병음만으로 학습 가능)</span></label>
+        <input id="ctxt" type="text" placeholder="예: 我是学生 / I am a student / 私は学生です">
+      </div>
+      <div class="form-group" id="pinyinRow">
+        <label>한어병음</label>
+        <input id="cpy" type="text" placeholder="예: wǒ shì xuésheng">
+        <small>💡 텍스트를 비우고 병음만 입력하면 <strong>병음 전용 학습</strong>으로 등록됩니다 (단어 배열·빈칸 모두 병음 기준)</small>
+      </div>
+      <div class="form-group">
+        <label>한국어 뜻/번역</label>
+        <input id="cmean" type="text" placeholder="예: 나는 학생이다">
+      </div>
+      <div class="form-group">
+        <label>단원 지정 (선택)</label>
+        <select id="cunit">
+          <option value="">-- 단원 미지정 --</option>
+          ${Object.values(DB.units)
+            .filter(u => u.language === S.teacherLang)
+            .sort((a,b)=>(a.order||0)-(b.order||0))
+            .map(u => `<option value="${u.id}">${u.order ? u.order+'단원 ' : ''}${u.name}</option>`)
+            .join('')}
+        </select>
+        <small>단원을 먼저 <strong>📚 단원 관리</strong> 탭에서 만드세요</small>
+      </div>
+      <div class="form-group">
+        <label>단어 구분 (띄어쓰기로 구분, 비우면 자동 분리)</label>
+        <input id="cwds" type="text" placeholder="예: 我 是 学生 — 또는 비워두세요">
+        <small>중국어: 비우면 글자 단위 분리 / 영어·일본어: 비우면 띄어쓰기 기준 분리</small>
+      </div>
+      <div class="form-group">
+        <label>원어민 음성 파일 (선택)</label>
+        <input id="caud" type="file" accept="audio/*" style="background:var(--bg);padding:8px;border:2px solid var(--border);border-radius:10px;width:100%">
+      </div>
+      <button class="btn btn-primary" onclick="addContent()">콘텐츠 추가</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div class="section-title" style="margin:0">등록된 콘텐츠 (${{zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.teacherLang]})</div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>텍스트</th><th>언어</th><th>유형</th><th>단원</th><th>뜻</th><th>병음</th><th>음성</th><th>삭제</th>
+        </tr></thead>
+        <tbody>
+        ${items.length===0
+          ? `<tr><td colspan="7" style="text-align:center;padding:36px;color:var(--gray)">콘텐츠가 없습니다.</td></tr>`
+          : items.map(item=>`
+            <tr>
+              <td><strong>${item.text}</strong>${item.pinyinOnly ? ' <span class="badge" style="background:#fef9c3;color:#854d0e;margin-left:4px">병음 전용</span>' : ''}</td>
+              <td><span class="badge badge-${item.language}">${{zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[item.language]}</span></td>
+              <td><span class="badge badge-type">${item.type==='sentence'?'문장':'어휘'}</span></td>
+              <td>${item.unitId && DB.units[item.unitId] ? `<span style="font-size:.75rem;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:5px">${DB.units[item.unitId].order ? DB.units[item.unitId].order+'단원' : DB.units[item.unitId].name}</span>` : '—'}</td>
+              <td>${item.meaning||'—'}</td>
+              <td>${item.pinyin||'—'}</td>
+              <td><button class="audio-btn" style="width:32px;height:32px;font-size:.9rem" onclick="_playItemById('${item.id}')">▶</button></td>
+              <td><button class="btn btn-danger btn-xs" onclick="delContent('${item.id}')">삭제</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function addContent() {
+  const lang  = S.teacherLang;
+  const type  = document.getElementById('ct').value;
+  const text  = document.getElementById('ctxt').value.trim();
+  const py    = document.getElementById('cpy').value.trim();
+  const mean  = document.getElementById('cmean').value.trim();
+  const wraw  = document.getElementById('cwds').value.trim();
+  const aFile = document.getElementById('caud').files[0];
+
+  // Allow pinyin-only: if text is empty but pinyin is provided, use pinyin as text
+  const pinyinOnly = !text && !!py && lang === 'zh';
+  const effectiveText = text || py;
+  if (!effectiveText) return toast('텍스트 또는 병음을 입력하세요', 'err');
+
+  let words;
+  if (wraw) {
+    words = wraw.split(/\s+/).filter(Boolean);
+  } else if (pinyinOnly) {
+    // Pinyin-only: split by spaces (syllable by syllable)
+    words = py.split(/\s+/).filter(Boolean);
+  } else if (lang === 'zh') {
+    words = [...effectiveText].filter(c => c.trim());
+  } else {
+    words = effectiveText.split(/\s+/).filter(Boolean);
+  }
+
+  const unitEl = document.getElementById('cunit');
+  const unitId = unitEl ? unitEl.value : '';
+  function save(audioData=null) {
+    const id = genId();
+    DB.content[id] = { id, language:lang, type, text:effectiveText, pinyin: pinyinOnly ? '' : py, meaning:mean, words, audioData, pinyinOnly, unitId: unitId||null };
+    saveContent().then(()=>{ toast('콘텐츠 추가!', 'ok'); render(); });
+  }
+  if (aFile) {
+    const fr = new FileReader();
+    fr.onload = e => save(e.target.result);
+    fr.readAsDataURL(aFile);
+  } else { save(); }
+}
+
+function delContent(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  delete DB.content[id];
+  saveContent().then(()=>{ toast('삭제됨'); render(); });
+}
+
+// Teacher → Records
+function renderRecords() {
+  const classes = Object.values(DB.classes).filter(c => c.language === S.teacherLang);
+  const units   = Object.values(DB.units)
+    .filter(u => u.language === S.teacherLang)
+    .sort((a,b) => (a.order||0)-(b.order||0));
+
+  if (!classes.length) return `<div class="empty"><div class="ico">📊</div><p>반을 먼저 생성하세요.</p></div>`;
+
+  // Unit filter tabs
+  const filterUnits = [{id:'__all__', label:'전체'}, ...units.map(u=>({id:u.id, label:(u.order?u.order+'단원 ':'')+u.name}))];
+  const selectedUnit = S.recordUnitFilter || '__all__';
+
+  const filterHtml = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+      <span style="font-size:.78rem;font-weight:700;color:var(--gray);margin-right:4px">단원 필터:</span>
+      ${filterUnits.map(u=>`
+        <button class="filter-btn ${selectedUnit===u.id?'active':''}"
+          onclick="S.recordUnitFilter='${u.id}';render()">
+          ${u.label}
+        </button>`).join('')}
+      <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="confirmResetRecords()">
+        🗑️ 기록 초기화
+      </button>
+    </div>`;
+
+  const classCards = classes.map(cls => {
+    if (!cls.students.length) return `
+      <div class="form-card"><h3>🏫 ${cls.name}</h3>
+        <p style="color:var(--gray);font-size:.83rem">학생이 없습니다.</p>
+      </div>`;
+
+    const rows = [...cls.students].sort((a,b)=>(a.number||9999)-(b.number||9999)).map(st => {
+      // Filter records by selected unit
+      const recs = Object.entries(DB.records)
+        .filter(([k]) => {
+          if (!k.startsWith(cls.id+'_'+st.id+'_')) return false;
+          if (selectedUnit === '__all__') return true;
+          // key format: classId_studentId_contentId_type
+          // find content and check unitId
+          const parts = k.split('_');
+          const contentId = parts[2];
+          const c = DB.content[contentId];
+          return c && c.unitId === selectedUnit;
+        })
+        .map(([,v])=>v);
+      const total   = recs.reduce((a,r)=>a+r.attempts,0);
+      const correct = recs.reduce((a,r)=>a+r.correct,0);
+      const pct     = total>0 ? Math.round(correct/total*100) : null;
+      return { classGroup:st.classGroup, number:st.number, name:st.name, stId:st.id, total, correct, pct };
+    });
+
+    // Unit label for header
+    const unitLabel = selectedUnit === '__all__' ? '전체' :
+      (DB.units[selectedUnit] ? (DB.units[selectedUnit].order ? DB.units[selectedUnit].order+'단원 ' : '') + DB.units[selectedUnit].name : '');
+
+    return `
+      <div class="form-card">
+        <h3>
+          <span>🏫 ${cls.name} <span style="font-weight:400;color:var(--gray);font-size:.82rem">${unitLabel} 기록</span></span>
+          <button class="btn btn-danger btn-xs" onclick="confirmResetClass('${cls.id}','${cls.name}')">반 기록 초기화</button>
+        </h3>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:8px;text-align:left;font-size:.75rem;color:var(--gray)">학생</th>
+            <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--gray)">시도</th>
+            <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--gray)">정답</th>
+            <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--gray)">정답률</th>
+            <th style="padding:8px;text-align:center;font-size:.75rem;color:var(--gray)">초기화</th>
+          </tr></thead>
+          <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td style="padding:9px 8px;border-top:1px solid var(--bg)">
+                ${r.classGroup ? `<span style="font-size:.7rem;font-weight:700;background:#e0e7ff;color:#3730a3;padding:1px 6px;border-radius:4px;margin-right:4px">${r.classGroup}</span>` : ""}
+                ${r.number ? `<span style="color:var(--amber);font-weight:700;font-size:.8rem;margin-right:4px">${r.number}번</span>` : ""}
+                👤 ${r.name}
+              </td>
+              <td style="padding:9px 8px;border-top:1px solid var(--bg);text-align:center">${r.total||'—'}</td>
+              <td style="padding:9px 8px;border-top:1px solid var(--bg);text-align:center">${r.correct||'—'}</td>
+              <td style="padding:9px 8px;border-top:1px solid var(--bg);text-align:center">
+                ${r.pct!==null
+                  ? `<span style="font-weight:700;color:${r.pct>=70?'var(--green)':'var(--red)'}">${r.pct}%</span>`
+                  : '—'}
+              </td>
+              <td style="padding:9px 8px;border-top:1px solid var(--bg);text-align:center">
+                ${r.total ? `<button class="btn btn-danger btn-xs" onclick="confirmResetStudent('${cls.id}','${r.stId}','${r.name}')">초기화</button>` : '—'}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  return filterHtml + classCards;
+}
+
+// Reset helpers
+function confirmResetRecords() {
+  if (!confirm('이 언어의 전체 학습 기록을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+  const lang = S.teacherLang;
+  // Delete all records for classes in this language
+  const classIds = Object.values(DB.classes)
+    .filter(c => c.language === lang)
+    .map(c => c.id);
+  Object.keys(DB.records).forEach(k => {
+    if (classIds.some(cid => k.startsWith(cid + '_'))) delete DB.records[k];
+  });
+  saveRecords().then(() => { toast('전체 기록이 초기화되었습니다', 'ok'); render(); });
+}
+
+function confirmResetClass(clsId, clsName) {
+  if (!confirm(`[${clsName}] 반의 모든 학습 기록을 초기화하시겠습니까?`)) return;
+  Object.keys(DB.records).forEach(k => {
+    if (k.startsWith(clsId + '_')) delete DB.records[k];
+  });
+  saveRecords().then(() => { toast(`${clsName} 기록 초기화 완료`, 'ok'); render(); });
+}
+
+function confirmResetStudent(clsId, stId, name) {
+  if (!confirm(`[${name}] 학생의 학습 기록을 초기화하시겠습니까?`)) return;
+  Object.keys(DB.records).forEach(k => {
+    if (k.startsWith(clsId + '_' + stId + '_')) delete DB.records[k];
+  });
+  saveRecords().then(() => { toast(`${name} 기록 초기화 완료`, 'ok'); render(); });
+}
+
+// ── STUDENT ───────────────────────────────────
+function renderStudent() {
+  if (S.studentStep==='lang')     return renderLangSel();
+  if (S.studentStep==='unit')     return renderUnitSel();
+  if (S.studentStep==='class')    return renderClassSel();
+  if (S.studentStep==='student')  return renderStudentSel();
+  if (S.studentStep==='exercise') return renderExSel();
+  if (S.studentStep==='practice') return renderPractice();
+}
+
+function renderLangSel() {
+  return `<div class="screen">
+    <div class="section-title" style="justify-content:center;font-size:1.1rem;margin-bottom:24px">🌏 학습할 언어를 선택하세요</div>
+    <div class="lang-grid" style="max-width:500px;margin:0 auto">
+      ${[{c:'zh',f:'🇨🇳',n:'中文 중국어'},{c:'ja',f:'🇯🇵',n:'日本語 일본어'},{c:'en',f:'🇺🇸',n:'English 영어'}]
+        .map(l=>`
+          <div class="lang-card ${l.c}" onclick="nav('student',{studentStep:'unit',language:'${l.c}',unitId:null,classId:null,studentId:null})">
+            <div class="flag" style="font-size:2.8rem">${l.f}</div>
+            <div class="name" style="font-size:1rem;margin-top:6px">${l.n}</div>
+          </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderUnitSel() {
+  const langLabel = {zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.language];
+  const units = Object.values(DB.units)
+    .filter(u => u.language === S.language)
+    .sort((a,b) => (a.order||0)-(b.order||0));
+
+  // Count content per unit
+  const allContent = Object.values(DB.content).filter(c => c.language === S.language);
+  const unassigned = allContent.filter(c => !c.unitId).length;
+
+  return `<div class="screen">
+    <div class="breadcrumb">
+      <span class="link" onclick="nav('student',{studentStep:'lang'})">언어 선택</span> › <span>${langLabel}</span>
+    </div>
+    <div class="section-title" style="justify-content:center;font-size:1.05rem;margin-bottom:20px">📚 단원을 선택하세요</div>
+    ${units.length === 0 && unassigned === 0
+      ? `<div class="empty"><div class="ico">😔</div><p>아직 등록된 단원이 없습니다.<br>교사에게 문의하세요.</p></div>`
+      : `<div style="display:flex;flex-direction:column;gap:12px;max-width:520px;margin:0 auto">
+          ${units.map(u => {
+            const cnt = allContent.filter(c => c.unitId === u.id).length;
+            return `<div class="mode-card" style="text-align:left;padding:20px 22px;display:flex;align-items:center;gap:16px"
+              onclick="nav('student',{studentStep:'class',unitId:'${u.id}'})">
+              <div style="background:var(--amber);color:white;border-radius:10px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:800;flex-shrink:0">${u.order||'?'}</div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:1rem;color:var(--navy)">${u.name}</div>
+                ${u.desc ? `<div style="font-size:.78rem;color:var(--gray);margin-top:2px">${u.desc}</div>` : ''}
+                <div style="font-size:.72rem;color:var(--amber);font-weight:600;margin-top:4px">📝 ${cnt}개 학습 항목</div>
+              </div>
+              <div style="font-size:1.4rem;color:var(--border)">›</div>
+            </div>`;
+          }).join('')}
+          ${unassigned > 0 ? `
+          <div class="mode-card" style="text-align:left;padding:20px 22px;display:flex;align-items:center;gap:16px;border-style:dashed"
+            onclick="nav('student',{studentStep:'class',unitId:'__all__'})">
+            <div style="background:var(--gray);color:white;border-radius:10px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">📋</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:1rem;color:var(--navy)">전체 연습</div>
+              <div style="font-size:.78rem;color:var(--gray);margin-top:2px">단원 미지정 포함 전체 항목</div>
+              <div style="font-size:.72rem;color:var(--gray);font-weight:600;margin-top:4px">📝 ${allContent.length}개 학습 항목</div>
+            </div>
+            <div style="font-size:1.4rem;color:var(--border)">›</div>
+          </div>` : ''}
+        </div>`}
+  </div>`;
+}
+
+function renderClassSel() {
+  const langLabel = {zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.language];
+  const classes = Object.values(DB.classes).filter(c => c.language === S.language);
+  return `<div class="screen">
+    <div class="breadcrumb">
+      <span class="link" onclick="nav('student',{studentStep:'lang'})">언어 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'unit'})">단원 선택</span> ›
+      <span>${langLabel}</span>
+    </div>
+    <div class="section-title">🏫 반을 선택하세요</div>
+    ${!classes.length
+      ? `<div class="empty"><div class="ico">😔</div><p>교사가 아직 반을 만들지 않았습니다.</p></div>`
+      : `<div class="btn-grid">
+          ${classes.map(c=>`
+            <div class="btn-card" onclick="_selClass('${c.id}')">
+              <div style="font-size:1.6rem">🏫</div>
+              <div style="font-weight:700;margin-top:4px">${c.name}</div>
+              <div style="font-size:.78rem;color:var(--gray)">${c.students.length}명</div>
+            </div>`).join('')}
+        </div>`}
+  </div>`;
+}
+window._selClass = (id) => nav('student',{studentStep:'student',classId:id});
+
+function renderStudentSel() {
+  const cls = DB.classes[S.classId];
+  const sorted = [...cls.students].sort((a,b)=>{ const cg = (a.classGroup||'').localeCompare(b.classGroup||''); return cg !== 0 ? cg : (a.number||9999)-(b.number||9999); });
+  return `<div class="screen">
+    <div class="breadcrumb">
+      <span class="link" onclick="nav('student',{studentStep:'lang'})">언어 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'unit'})">단원 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'class'})">반 선택</span> ›
+      <span>${cls.name}</span>
+    </div>
+    <div class="section-title">👤 이름을 클릭하세요</div>
+    <div class="btn-grid">
+      ${sorted.map(s=>`
+        <div class="btn-card" onclick="_selStudent('${s.id}')">
+          ${s.classGroup ? `<div style="font-size:.68rem;font-weight:700;color:#3730a3;background:#e0e7ff;border-radius:5px;padding:1px 7px;display:inline-block;margin-bottom:3px">${s.classGroup}</div>` : ''}
+          ${s.number ? `<div style="font-size:.72rem;font-weight:700;color:var(--amber)">${s.number}번</div>` : ''}
+          <div style="font-size:1.3rem">😊</div>
+          <div style="font-weight:700;margin-top:3px">${s.name}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+window._selStudent = (id) => nav('student',{studentStep:'exercise',studentId:id});
+
+function renderExSel() {
+  const cls = DB.classes[S.classId];
+  const st  = cls.students.find(s=>s.id===S.studentId);
+  const langLabel = {zh:'🇨🇳 중국어',ja:'🇯🇵 일본어',en:'🇺🇸 영어'}[S.language];
+  return `<div class="screen">
+    <div class="breadcrumb">
+      <span class="link" onclick="nav('student',{studentStep:'lang'})">언어 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'unit'})">단원 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'class'})">반 선택</span> ›
+      <span class="link" onclick="nav('student',{studentStep:'student'})">${cls.name}</span> ›
+      <span>${st.name}</span>
+    </div>
+    <div class="section-title" style="margin-bottom:18px">✏️ 학습 유형을 선택하세요 <span style="font-weight:400;font-size:.85rem;color:var(--gray)">(${langLabel})</span></div>
+    ${true ? `
+      <div class="section-title">✏️ 학습 유형 선택</div>
+      <div class="ex-grid">
+        ${[
+          {t:'word',    i:'🔤', n:'단어 배열',      d:'단어를 올바른 순서로 배열'},
+          {t:'blank',   i:'📝', n:'빈칸 채우기',    d:'빈칸에 알맞은 단어 입력'},
+          {t:'flash',   i:'🃏', n:'플래시카드',      d:'단어 뜻 맞추기'},
+          {t:'meaning', i:'🎯', n:'뜻 보고 찾기',   d:'한국어 뜻을 보고 문장 고르기'}
+        ].map(ex=>`
+          <div class="ex-card" onclick="_startEx('${ex.t}')">
+            <div class="icon">${ex.i}</div>
+            <div class="name">${ex.n}</div>
+            <div class="desc">${ex.d}</div>
+          </div>`).join('')}
+      </div>` : `<p style="color:var(--gray);text-align:center">언어를 먼저 선택하세요.</p>`}
+  </div>`;
+}
+// _selLang removed - language selected at start of student flow
+
+window._startEx = (type) => {
+  const allItems = Object.values(DB.content).filter(c => c.language === S.language);
+  const items = S.unitId && S.unitId !== '__all__'
+    ? allItems.filter(c => c.unitId === S.unitId)
+    : allItems;
+  if (!items.length) return toast('이 단원에 콘텐츠가 없습니다. 교사에게 문의하세요.', 'err');
+  S.exType    = type;
+  S.exItems   = items.sort(()=>Math.random()-.5);
+  S.exIdx     = 0;
+  S.exScore   = 0;
+  initEx();
+  nav('student', {studentStep:'practice'});
+};
+
+function initEx() {
+  const item = S.exItems[S.exIdx];
+  if (!item) return;
+  S.exAnswered = false;
+  S.meaningChoices = null;
+  S.meaningWrongPick = null;
+  if (S.exType==='word') {
+    S.waBank   = [...item.words].sort(()=>Math.random()-.5);
+    S.waAnswer = [];
+  } else if (S.exType==='blank') {
+    S.fbWords    = item.words || (item.language==='zh' ? [...item.text] : item.text.split(' '));
+    S.fbBlankIdx = Math.floor(Math.random() * S.fbWords.length);
+    S.fbUserAnswer = '';
+  } else {
+    S.fcFlipped = false;
+  }
+}
+
+// ── PRACTICE ──────────────────────────────────
+function renderPractice() {
+  const item = S.exItems[S.exIdx];
+  if (!item) return renderDone();
+  const cls   = DB.classes[S.classId];
+  const st    = cls.students.find(s=>s.id===S.studentId);
+  const total = S.exItems.length;
+  const pct   = ((S.exIdx)/total*100).toFixed(0);
+  const typeLabel = {word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드',meaning:'뜻 보고 찾기'}[S.exType];
+  const doneUnit = S.unitId && S.unitId !== '__all__' && DB.units[S.unitId]
+    ? (DB.units[S.unitId].order ? DB.units[S.unitId].order+'단원 ' : '') + DB.units[S.unitId].name
+    : '전체';
+  const unitName = S.unitId && S.unitId !== '__all__' && DB.units[S.unitId]
+    ? (DB.units[S.unitId].order ? DB.units[S.unitId].order+'단원 ' : '') + DB.units[S.unitId].name
+    : '전체';
+  const langLabel = {zh:'🇨🇳',ja:'🇯🇵',en:'🇺🇸'}[S.language];
+
+  let exBody = '';
+  if (S.exType==='word')    exBody = renderWordArrangement(item);
+  if (S.exType==='blank')   exBody = renderFillBlank(item);
+  if (S.exType==='flash')   exBody = renderFlashcard(item);
+  if (S.exType==='meaning') exBody = renderMeaningEx(item);
+
+  return `<div class="screen">
+    <div class="breadcrumb">
+      <span class="link" onclick="nav('student',{studentStep:'exercise'})">${langLabel} · ${unitName} · ${typeLabel}</span> ›
+      <span>${st.name}</span>
+    </div>
+    <div class="ex-area">
+      <div class="ex-progress">
+        <span>📍 ${S.exIdx+1} / ${total}</span>
+        <span>🏆 ${S.exScore}점</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      ${exBody}
+    </div>
+  </div>`;
+}
+
+// Word Arrangement
+function renderWordArrangement(item) {
+  return `
+    <div class="ex-top">
+      <span style="font-size:.83rem;color:var(--gray)">단어를 클릭해 문장을 완성하세요</span>
+      <button class="audio-btn" onclick="_playItemById('${item.id}')">🔊</button>
+    </div>
+    ${item.pinyinOnly ? `<div style="font-size:.72rem;background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:6px;text-align:center;margin-bottom:8px;font-weight:600">병음 전용 학습</div>` : ''}
+    ${item.pinyin && !item.pinyinOnly ? `<div class="pinyin-line">${item.pinyin}</div>` : ''}
+    ${item.meaning ? `<div class="meaning-line">뜻: ${item.meaning}</div>` : ''}
+
+    <div class="label-small">▶ 답변 영역</div>
+    <div class="answer-area ${S.waAnswer.length?'active':''}">
+      ${S.waAnswer.map((w,i)=>`<button class="word-chip placed" onclick="_rmWord(${i})">${w}</button>`).join('')}
+      ${!S.waAnswer.length ? `<span class="placeholder-text">단어를 여기에 배열하세요</span>` : ''}
+    </div>
+
+    <div class="label-small">📦 단어 목록</div>
+    <div class="word-bank">
+      ${S.waBank.map((w,i)=>`<button class="word-chip" onclick="_addWord(${i})">${w}</button>`).join('')}
+    </div>
+
+    <div class="ex-actions">
+      <button class="btn btn-outline" onclick="_resetWA()">초기화</button>
+      <button class="btn btn-primary" onclick="_submitWA()">제출 →</button>
+    </div>
+    <div id="res" class="result-area"></div>`;
+}
+
+window._addWord = (i) => {
+  if (S.exAnswered) return;
+  S.waAnswer.push(S.waBank.splice(i,1)[0]);
+  render();
+};
+window._rmWord = (i) => {
+  if (S.exAnswered) return;
+  S.waBank.push(S.waAnswer.splice(i,1)[0]);
+  render();
+};
+window._resetWA = () => {
+  const item = S.exItems[S.exIdx];
+  S.waBank   = [...item.words].sort(()=>Math.random()-.5);
+  S.waAnswer = [];
+  S.exAnswered = false;
+  render();
+};
+window._submitWA = () => {
+  if (!S.waAnswer.length) return toast('단어를 배열해주세요', 'err');
+  const item   = S.exItems[S.exIdx];
+  const got    = S.waAnswer.join('');
+  const expect = item.words.join('');
+  const correct = got===expect || S.waAnswer.join(' ')===item.words.join(' ');
+  S.exAnswered = true;
+  if (correct) S.exScore++;
+  recordResult(correct);
+  const res = document.getElementById('res');
+  if (res) res.innerHTML = correct
+    ? `<div class="result-correct">✅ 정답!</div>
+       <button class="btn btn-primary" style="margin-top:8px" onclick="_next()">다음 →</button>`
+    : `<div class="result-wrong">❌ 오답</div>
+       <div class="result-hint">정답: <strong>${item.words.join(' ')}</strong></div>
+       <button class="btn btn-primary" style="margin-top:8px" onclick="_next()">다음 →</button>`;
+};
+
+// Fill in Blank
+function renderFillBlank(item) {
+  const words = S.fbWords;
+  const bi    = S.fbBlankIdx;
+  const sentence = words.map((w,i) =>
+    i===bi
+      ? `<input class="blank-input" id="fb-in" type="text" value="${S.fbUserAnswer}" 
+           placeholder="?" oninput="S.fbUserAnswer=this.value"
+           onkeydown="if(event.key==='Enter')_submitBlank()">`
+      : `<span style="margin:0 3px">${w}</span>`
+  ).join('');
+
+  return `
+    <div class="ex-top">
+      <span style="font-size:.83rem;color:var(--gray)">빈칸에 알맞은 단어를 입력하세요</span>
+      <button class="audio-btn" onclick="_playItemById('${item.id}')">🔊</button>
+    </div>
+    ${item.pinyinOnly ? `<div style="font-size:.72rem;background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:6px;text-align:center;margin-bottom:8px;font-weight:600">병음 전용 학습</div>` : ''}
+    ${item.pinyin && !item.pinyinOnly ? `<div class="pinyin-line">${item.pinyin}</div>` : ''}
+    <div class="blank-sentence">${sentence}</div>
+    ${item.meaning ? `<div class="meaning-line" style="margin-top:8px">뜻: ${item.meaning}</div>` : ''}
+    <div class="ex-actions" style="margin-top:18px">
+      <button class="btn btn-primary" onclick="_submitBlank()">제출 →</button>
+    </div>
+    <div id="res" class="result-area"></div>`;
+}
+
+// Normalize tone marks for pinyin comparison
+function normPinyin(s) {
+  return s.toLowerCase()
+    .replace(/[āáǎà]/g,'a').replace(/[ēéěè]/g,'e')
+    .replace(/[īíǐì]/g,'i').replace(/[ōóǒò]/g,'o')
+    .replace(/[ūúǔù]/g,'u').replace(/[ǖǘǚǜü]/g,'v')
+    .replace(/\s/g,'');
+}
+
+window._submitBlank = () => {
+  const input  = document.getElementById('fb-in');
+  const answer = (input ? input.value : S.fbUserAnswer).trim();
+  const item   = S.exItems[S.exIdx];
+  const correct_word = S.fbWords[S.fbBlankIdx];
+  let correct = answer.toLowerCase() === correct_word.toLowerCase();
+
+  // Chinese: also accept pinyin
+  if (!correct && item.language==='zh' && item.pinyin) {
+    const pyParts = item.pinyin.split(/\s+/);
+    const expected = pyParts[S.fbBlankIdx];
+    if (expected) {
+      correct = normPinyin(answer) === normPinyin(expected)
+             || answer.toLowerCase() === expected.toLowerCase();
+    }
+  }
+
+  S.exAnswered = true;
+  if (correct) S.exScore++;
+  recordResult(correct);
+
+  const pyHint = !item.pinyinOnly && item.language==='zh' && item.pinyin
+    ? ` (${item.pinyin.split(/\s+/)[S.fbBlankIdx]||''})`
+    : '';
+
+  const res = document.getElementById('res');
+  if (res) res.innerHTML = correct
+    ? `<div class="result-correct">✅ 정답!</div>
+       <button class="btn btn-primary" style="margin-top:8px" onclick="_next()">다음 →</button>`
+    : `<div class="result-wrong">❌ 오답</div>
+       <div class="result-hint">정답: <strong>${correct_word}</strong>${pyHint}</div>
+       <button class="btn btn-primary" style="margin-top:8px" onclick="_next()">다음 →</button>`;
+};
+
+// Flashcard
+function renderFlashcard(item) {
+  return `
+    <div class="ex-top">
+      <span style="font-size:.83rem;color:var(--gray)">카드를 클릭하면 뒤집힙니다</span>
+      <button class="audio-btn" onclick="_playItemById('${item.id}')">🔊</button>
+    </div>
+    <div class="fc-wrapper">
+      <div class="fc ${S.fcFlipped?'flipped':''}" id="fc" onclick="_flipCard()">
+        <div class="fc-face fc-front">
+          ${item.pinyinOnly ? `<div style="font-size:.72rem;background:rgba(255,255,255,.15);padding:2px 10px;border-radius:6px;margin-bottom:10px">병음 전용</div>` : (item.pinyin ? `<div style="font-size:.88rem;opacity:.7;margin-bottom:8px">${item.pinyin}</div>` : '')}
+          <div style="font-size:2rem;font-weight:700">${item.text}</div>
+          <div class="fc-hint">👆 클릭하여 뒤집기</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div style="font-size:.9rem;opacity:.8;margin-bottom:8px">한국어 뜻</div>
+          <div style="font-size:1.6rem;font-weight:700">${item.meaning||'(뜻 없음)'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-btns ${S.fcFlipped?'show':''}" id="fc-btns">
+      <button class="btn btn-danger" onclick="_submitFC(false)">❌ 몰랐어요</button>
+      <button class="btn btn-green"  onclick="_submitFC(true)">✅ 알았어요</button>
+    </div>`;
+}
+
+window._flipCard = () => {
+  if (S.fcFlipped) return;
+  S.fcFlipped = true;
+  const fc = document.getElementById('fc');
+  if (fc) fc.classList.add('flipped');
+  setTimeout(() => {
+    const btns = document.getElementById('fc-btns');
+    if (btns) btns.classList.add('show');
+  }, 460);
+};
+
+window._submitFC = (correct) => {
+  if (correct) S.exScore++;
+  recordResult(correct);
+  _next();
+};
+
+// Meaning Exercise (뜻 보고 문장 찾기)
+function renderMeaningEx(item) {
+  // Build choices: correct + up to 3 random wrong from same language
+  if (!S.meaningChoices) buildMeaningChoices(item);
+  const choices = S.meaningChoices;
+
+  const numsLabel = ['①','②','③','④'];
+  const choiceHtml = choices.map((c, i) => {
+    let cls = '';
+    if (S.exAnswered) {
+      if (c.id === item.id) cls = 'correct';
+      else if (c.id === S.meaningWrongPick) cls = 'wrong';
+    }
+    return `<button class="meaning-choice ${cls}" 
+      ${S.exAnswered ? 'disabled' : ''}
+      onclick="_pickMeaning('${c.id}')">
+      <span class="choice-num">${numsLabel[i]}</span>
+      <span>${c.text}${c.pinyin ? ` <span style="font-size:.82rem;color:var(--zh);margin-left:6px">(${c.pinyin})</span>` : ''}</span>
+    </button>`;
+  }).join('');
+
+  return `
+    <div class="ex-top">
+      <span style="font-size:.83rem;color:var(--gray)">뜻을 보고 맞는 문장을 고르세요</span>
+      ${S.exAnswered ? `<button class="audio-btn" onclick="_playItemById('${item.id}')">🔊</button>` : ''}
+    </div>
+    
+    <div style="background:linear-gradient(135deg,var(--navy),var(--navy2));color:white;border-radius:14px;padding:24px;text-align:center;margin:12px 0 4px">
+      <div style="font-size:.78rem;opacity:.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">한국어 뜻</div>
+      <div style="font-size:1.5rem;font-weight:700">${item.meaning || '(뜻 없음)'}</div>
+    </div>
+
+    <div class="meaning-choices">${choiceHtml}</div>
+
+    ${S.exAnswered ? `
+      <div class="result-area" style="margin-top:16px">
+        ${S.meaningWrongPick === null
+          ? '<div class="result-correct">✅ 정답!</div>'
+          : `<div class="result-wrong">❌ 오답</div>
+             <div class="result-hint">정답: <strong>${item.text}</strong></div>`}
+        <button class="btn btn-primary" style="margin-top:10px" onclick="_next()">다음 →</button>
+      </div>` : ''}`;
+}
+
+function buildMeaningChoices(item) {
+  // Get all other items in same language as wrong options
+  const pool = Object.values(DB.content)
+    .filter(c => c.language === item.language && c.id !== item.id && c.meaning);
+  // Shuffle pool and take up to 3
+  const wrong = pool.sort(() => Math.random() - .5).slice(0, 3);
+  // Combine with correct and shuffle
+  S.meaningChoices = [item, ...wrong].sort(() => Math.random() - .5);
+  S.meaningWrongPick = null;
+}
+
+window._pickMeaning = (chosenId) => {
+  if (S.exAnswered) return;
+  const item = S.exItems[S.exIdx];
+  const correct = chosenId === item.id;
+  S.exAnswered = true;
+  if (correct) {
+    S.exScore++;
+    S.meaningWrongPick = null;
+  } else {
+    S.meaningWrongPick = chosenId;
+  }
+  recordResult(correct);
+  render();
+};
+
+// ── DONE ─────────────────────────────────────
+function renderDone() {
+  const total = S.exItems.length;
+  const pct   = Math.round(S.exScore/total*100);
+  const cls   = DB.classes[S.classId];
+  const st    = cls.students.find(s=>s.id===S.studentId);
+  const emoji = pct>=80?'🏆':pct>=60?'👍':'💪';
+  const color = pct>=70?'var(--green)':'var(--red)';
+
+  return `<div class="screen">
+    <div class="done-card">
+      <div style="font-size:3.5rem;margin-bottom:14px">${emoji}</div>
+      <h2 style="font-size:1.3rem;color:var(--navy);margin-bottom:4px">${st.name}님, 수고하셨어요!</h2>
+      <p style="color:var(--gray);font-size:.85rem;margin-bottom:24px">${{word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드'}[S.exType]} 완료</p>
+      <div class="done-pct" style="color:${color}">${pct}%</div>
+      <p style="color:var(--gray);margin:8px 0 18px;font-size:.88rem">${total}문제 중 ${S.exScore}개 정답</p>
+      <div class="progress-bar" style="margin-bottom:24px">
+        <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-primary" onclick="window._startEx(S.exType)">🔄 다시 학습</button>
+        <button class="btn btn-outline" onclick="nav('student',{studentStep:'exercise'})">← 유형 선택</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+window._next = () => {
+  S.exIdx++;
+  if (S.exIdx >= S.exItems.length) {
+    render();
+  } else {
+    initEx();
+    render();
+  }
+};
+
+// ── RECORDS ──────────────────────────────────
+function recordResult(correct) {
+  const item = S.exItems[S.exIdx];
+  const key  = `${S.classId}_${S.studentId}_${item.id}_${S.exType}`;
+  if (!DB.records[key]) DB.records[key] = { attempts:0, correct:0 };
+  DB.records[key].attempts++;
+  if (correct) DB.records[key].correct++;
+  DB.records[key].timestamp = Date.now();
+  saveRecords();
+}
+
+// ── AFTER RENDER ─────────────────────────────
+function afterRender() {
+  // Handle pinyin field visibility in teacher content form
+  const langSel = document.getElementById('cl');
+  if (langSel) {
+    const row = document.getElementById('pinyinRow');
+    const toggle = () => { if (row) row.style.display = langSel.value==='zh'?'block':'none'; };
+    langSel.addEventListener('change', toggle);
+    toggle();
+  }
+  // Auto-focus blank input
+  const fb = document.getElementById('fb-in');
+  if (fb) fb.focus();
+}
+
+// ── INIT ─────────────────────────────────────
+loadDB().then(render);
+</script>
