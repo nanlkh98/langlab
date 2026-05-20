@@ -419,6 +419,77 @@ body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); min-height:1
 <div id="modal-root"></div>
 
 <script>
+// ── JSON IMPORT ───────────────────────────────
+async function importJSON() {
+  const raw = document.getElementById('json-import').value.trim();
+  const result = document.getElementById('import-result');
+  if (!raw) { result.textContent = '⚠️ JSON을 붙여넣어 주세요'; return; }
+
+  let items;
+  try {
+    items = JSON.parse(raw);
+    if (!Array.isArray(items)) throw new Error('배열 형식이어야 합니다');
+  } catch(e) {
+    result.textContent = '❌ JSON 형식 오류: ' + e.message;
+    result.style.color = 'var(--red)';
+    return;
+  }
+
+  // Build unit name → id map for current language
+  const unitMap = {};
+  Object.values(DB.units)
+    .filter(u => u.language === S.teacherLang)
+    .forEach(u => { unitMap[u.name] = u.id; });
+
+  let added = 0, skipped = 0;
+  for (const item of items) {
+    const text = (item.text || '').trim();
+    if (!text) { skipped++; continue; }
+
+    const type    = item.type === 'vocabulary' ? 'vocabulary' : 'sentence';
+    const pinyin  = (item.pinyin  || '').trim();
+    const meaning = (item.meaning || '').trim();
+    const lang    = S.teacherLang;
+
+    // Determine words
+    const pinyinOnly = !text && !!pinyin && lang === 'zh';
+    let words;
+    if (item.words && Array.isArray(item.words)) {
+      words = item.words;
+    } else if (pinyinOnly) {
+      words = pinyin.split(/\s+/).filter(Boolean);
+    } else if (lang === 'zh') {
+      words = [...text].filter(c => c.trim());
+    } else {
+      words = text.split(/\s+/).filter(Boolean);
+    }
+
+    // Match unitName to unitId
+    let unitId = null;
+    if (item.unitName) {
+      // Try exact match first, then partial match
+      if (unitMap[item.unitName]) {
+        unitId = unitMap[item.unitName];
+      } else {
+        const match = Object.entries(unitMap).find(([k]) => k.includes(item.unitName) || item.unitName.includes(k));
+        if (match) unitId = match[1];
+      }
+    }
+    // Also support unitId directly
+    if (!unitId && item.unitId && DB.units[item.unitId]) unitId = item.unitId;
+
+    const id = genId();
+    DB.content[id] = { id, language:lang, type, text, pinyin, meaning, words, audioData:null, pinyinOnly:false, unitId };
+    added++;
+  }
+
+  await saveContent();
+  result.textContent = `✅ ${added}개 추가 완료${skipped ? ` (${skipped}개 건너뜀)` : ''}`;
+  result.style.color = 'var(--green)';
+  document.getElementById('json-import').value = '';
+  setTimeout(() => render(), 800);
+}
+
 // ── STORAGE ──────────────────────────────────
 // ── FIREBASE INIT ─────────────────────────────
 const firebaseConfig = {
@@ -964,6 +1035,34 @@ function renderContent() {
         <input id="caud" type="file" accept="audio/*" style="background:var(--bg);padding:8px;border:2px solid var(--border);border-radius:10px;width:100%">
       </div>
       <button class="btn btn-primary" onclick="addContent()">콘텐츠 추가</button>
+    </div>
+
+    <div class="form-card" style="border:2px dashed var(--amber);background:#fffbf0">
+      <h3>📥 JSON으로 일괄 가져오기 <span style="font-weight:400;font-size:.8rem;color:var(--gray)">PDF 분석 후 붙여넣기</span></h3>
+      <div class="form-group">
+        <label>JSON 데이터 붙여넣기</label>
+        <textarea id="json-import" rows="6" placeholder='예시:
+[
+  {
+    "type": "sentence",
+    "text": "我是学生",
+    "pinyin": "wǒ shì xuésheng",
+    "meaning": "나는 학생이다",
+    "unitName": "1단원 자기소개"
+  },
+  {
+    "type": "vocabulary",
+    "text": "学生",
+    "pinyin": "xuésheng",
+    "meaning": "학생"
+  }
+]'></textarea>
+        <small>💡 Claude에게 교재 PDF를 올리면 이 형식의 JSON을 만들어드려요. 붙여넣고 가져오기 클릭!</small>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" onclick="importJSON()">📥 가져오기</button>
+        <span id="import-result" style="font-size:.83rem;color:var(--gray)"></span>
+      </div>
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
