@@ -2,6 +2,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro"></script>
 
 <style>
 :root {
@@ -363,6 +364,32 @@ body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); min-height:1
 .meaning-choice.correct .choice-num { background:var(--green); color:white; }
 .meaning-choice.wrong   .choice-num { background:var(--red);   color:white; }
 
+/* SPEAKING */
+.sp-target { font-size:1.9rem; font-weight:700; text-align:center; margin:8px 0 4px; line-height:1.5; letter-spacing:2px; color:var(--navy); }
+.sp-ch.ok { color:var(--green); }
+.sp-ch.close { color:#d97706; text-decoration:underline wavy; text-underline-offset:6px; }
+.sp-ch.miss { color:var(--red); }
+.sp-mic-wrap { text-align:center; margin-top:18px; }
+.mic-btn { width:84px; height:84px; border-radius:50%; border:none; background:var(--navy); color:white; font-size:2rem; cursor:pointer; box-shadow:var(--shadow-md); transition:all .15s; }
+.mic-btn:hover { background:var(--amber); transform:scale(1.04); }
+.mic-btn.live { background:var(--red); animation:micPulse 1.2s infinite; }
+@keyframes micPulse { 0%{box-shadow:0 0 0 0 rgba(185,28,28,.45)} 70%{box-shadow:0 0 0 22px rgba(185,28,28,0)} 100%{box-shadow:0 0 0 0 rgba(185,28,28,0)} }
+.mic-hint { font-size:.83rem; color:var(--gray); margin-top:12px; }
+.sp-live { min-height:1.6em; margin-top:10px; font-size:1.05rem; color:var(--navy); }
+.sp-note { background:#fff8e6; border:2px solid var(--amber); border-radius:12px; padding:12px 16px; font-size:.85rem; color:var(--navy); text-align:center; margin-top:14px; line-height:1.6; }
+.sp-result { text-align:center; margin-top:18px; }
+.sp-score { font-family:'Poppins',sans-serif; font-size:3.6rem; font-weight:800; line-height:1; }
+.sp-score small { font-size:1.1rem; font-weight:700; margin-left:2px; }
+.sp-msg { font-size:1.1rem; font-weight:700; margin:8px 0 10px; color:var(--navy); }
+.sp-heard { font-size:.88rem; color:var(--gray); margin-bottom:8px; }
+.sp-legend { font-size:.75rem; color:var(--gray); margin-bottom:6px; }
+.sp-tip { font-size:.8rem; color:var(--gray); margin-top:4px; }
+
+.sp-notes{margin-top:12px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;text-align:left}
+.sp-notes-h{font-weight:700;font-size:.88rem;margin-bottom:6px}
+.sp-note-i{font-size:.85rem;line-height:1.55;padding:5px 0 5px 10px;border-left:3px solid #f59e0b}
+.sp-note-i.miss{border-left-color:#ef4444}
+.sp-notes-f{font-size:.72rem;color:#888;margin-top:8px}
 /* TOAST */
 .toast {
   position:fixed; bottom:24px; right:24px;
@@ -500,19 +527,37 @@ const firebaseConfig = {
   messagingSenderId: "100254086070",
   appId: "1:100254086070:web:b957aa93d10bb13af9c717"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} catch (e) {
+  console.error('Firebase 연결 실패 - 이 기기에만 저장합니다:', e);
+}
+const OFFLINE = !db;
+
+// ── SPACE (URL 파라미터로 데이터 공간 분리) ────────
+const SPACE = (() => {
+  const params = new URLSearchParams(window.location.search);
+  const s = params.get('space') || 'default';
+  return s.replace(/[^a-zA-Z0-9_-]/g, ''); // 안전한 문자만 허용
+})();
 
 const Store = {
   async get(k) {
     try {
-      const snap = await db.collection('langlab').doc(k).get();
+      if (OFFLINE) {
+        const raw = localStorage.getItem('ll_' + SPACE + '_' + k);
+        return raw ? JSON.parse(raw) : null;
+      }
+      const snap = await db.collection('langlab').doc(SPACE + '_' + k).get();
       return snap.exists ? JSON.parse(snap.data().value) : null;
     } catch(e) { console.error('FB get error:', e); return null; }
   },
   async set(k, v) {
     try {
-      await db.collection('langlab').doc(k).set({ value: JSON.stringify(v) });
+      if (OFFLINE) { localStorage.setItem('ll_' + SPACE + '_' + k, JSON.stringify(v)); return; }
+      await db.collection('langlab').doc(SPACE + '_' + k).set({ value: JSON.stringify(v) });
     } catch(e) { console.error('FB set error:', e); }
   }
 };
@@ -734,7 +779,7 @@ function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 // ═══════════════════════════════════════════════
 function render() {
   const root = document.getElementById('root');
-  let html = renderHeader();
+  let html = renderHeader() + (OFFLINE ? '<div style="background:#fff3cd;border-bottom:2px solid #f0a320;color:#7a4b00;padding:10px 16px;font-size:.82rem;text-align:center;line-height:1.5">⚠️ 서버(Firebase)에 연결하지 못했어요. 지금은 <b>이 기기에만 저장</b>되고 다른 선생님·학생과 공유되지 않아요.<br>인터넷 연결이나 학교 네트워크 차단 여부를 확인하고, Claude 미리보기가 아닌 <b>배포 주소</b>에서 열어 주세요.</div>' : '');
   if (S.view === 'home')    html += renderHome();
   else if (S.view === 'teacher') html += renderTeacher();
   else if (S.view === 'student') html += renderStudent();
@@ -747,7 +792,7 @@ function renderHeader() {
     ? `<button class="btn btn-outline btn-sm" onclick="nav('home')" style="color:rgba(255,255,255,.85);border-color:rgba(255,255,255,.3)">← 홈</button>`
     : '';
   return `<div class="header">
-    <div class="logo">Lang<span>Lab</span> <span style="font-size:.75rem;font-weight:400;opacity:.5;font-family:'Noto Sans KR'">외국어 학습</span></div>
+    <div class="logo">Lang<span>Lab</span> <span style="font-size:.75rem;font-weight:400;opacity:.5;font-family:'Noto Sans KR'">외국어 학습</span>${SPACE !== 'default' ? `<span style="font-size:.68rem;background:var(--amber);color:white;padding:1px 8px;border-radius:5px;margin-left:8px;font-family:'Noto Sans KR';font-weight:600">${SPACE}</span>` : ''}</div>
     <div class="header-right" style="display:flex;align-items:center;gap:12px">
 
       ${homeBtn}
@@ -783,11 +828,12 @@ function renderHome() {
       <div style="display:flex;flex-direction:column;gap:10px;font-size:.82rem;color:var(--gray)">
         <div style="display:flex;gap:10px;align-items:flex-start">
           <span style="background:var(--amber);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
-          <span>이 대화(채팅) 링크를 복사해서 공유 — 같은 링크로 접속하면 <strong>반·콘텐츠·기록이 모두 공유</strong>됩니다</span>
+          <span>각 선생님마다 <strong>?space=이름</strong>을 붙여 독립 공간 사용<br>
+          예) <code style="background:#f0ebe3;padding:1px 6px;border-radius:4px;font-size:.78rem">...langlab/?space=chinese1</code></span>
         </div>
         <div style="display:flex;gap:10px;align-items:flex-start">
           <span style="background:var(--amber);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
-          <span>교사가 먼저 반과 콘텐츠를 설정 → 학생들에게 링크 전달</span>
+          <span>교사가 먼저 자기 URL에서 반·콘텐츠 설정 → 같은 URL을 학생들에게 전달</span>
         </div>
         <div style="display:flex;gap:10px;align-items:flex-start">
           <span style="background:var(--navy);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:1px">💡</span>
@@ -1404,7 +1450,8 @@ function renderExSel() {
           {t:'word',    i:'🔤', n:'단어 배열',      d:'단어를 올바른 순서로 배열'},
           {t:'blank',   i:'📝', n:'빈칸 채우기',    d:'빈칸에 알맞은 단어 입력'},
           {t:'flash',   i:'🃏', n:'플래시카드',      d:'단어 뜻 맞추기'},
-          {t:'meaning', i:'🎯', n:'뜻 보고 찾기',   d:'한국어 뜻을 보고 문장 고르기'}
+          {t:'meaning', i:'🎯', n:'뜻 보고 찾기',   d:'한국어 뜻을 보고 문장 고르기'},
+          {t:'speak',   i:'🎤', n:'발음 연습',      d:'마이크로 읽고 점수 받기'}
         ].map(ex=>`
           <div class="ex-card" onclick="_startEx('${ex.t}')">
             <div class="icon">${ex.i}</div>
@@ -1435,6 +1482,7 @@ function initEx() {
   if (!item) return;
   S.exAnswered = false;
   S.meaningChoices = null;
+  resetSpeak();
   S.meaningWrongPick = null;
   if (S.exType==='word') {
     S.waBank   = [...item.words].sort(()=>Math.random()-.5);
@@ -1456,7 +1504,7 @@ function renderPractice() {
   const st    = cls.students.find(s=>s.id===S.studentId);
   const total = S.exItems.length;
   const pct   = ((S.exIdx)/total*100).toFixed(0);
-  const typeLabel = {word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드',meaning:'뜻 보고 찾기'}[S.exType];
+  const typeLabel = {word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드',meaning:'뜻 보고 찾기',speak:'발음 연습'}[S.exType];
   const doneUnit = S.unitId && S.unitId !== '__all__' && DB.units[S.unitId]
     ? (DB.units[S.unitId].order ? DB.units[S.unitId].order+'단원 ' : '') + DB.units[S.unitId].name
     : '전체';
@@ -1470,6 +1518,7 @@ function renderPractice() {
   if (S.exType==='blank')   exBody = renderFillBlank(item);
   if (S.exType==='flash')   exBody = renderFlashcard(item);
   if (S.exType==='meaning') exBody = renderMeaningEx(item);
+  if (S.exType==='speak')   exBody = renderSpeak(item);
 
   return `<div class="screen">
     <div class="breadcrumb">
@@ -1734,6 +1783,346 @@ window._pickMeaning = (chosenId) => {
   render();
 };
 
+// ── 발음 연습 (SPEAKING) ─────────────────────────
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let _rec = null;
+const SP_HANZI = /[一-鿿]/;
+
+function resetSpeak() {
+  try {
+    if (_rec) { _rec.onresult = _rec.onerror = _rec.onend = null; _rec.abort(); }
+  } catch (e) {}
+  _rec = null;
+  S.speakState = 'idle';
+  S.speakResult = null;
+  S.speakBest = null;
+  S.speakErr = '';
+}
+
+function spEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// 성조 기호 → 알파벳 (ü는 v로 통일)
+const SP_TONE = {};
+(function () {
+  const rows = { a: 'āáǎà', e: 'ēéěè', i: 'īíǐì', o: 'ōóǒò', u: 'ūúǔù', v: 'ǖǘǚǜ' };
+  for (const base in rows) [...rows[base]].forEach((ch, i) => { SP_TONE[ch] = [base, i + 1]; });
+  SP_TONE['ü'] = ['v', 0];
+})();
+
+function spPinyinBase(s) {
+  let out = '';
+  for (const ch of (s || '').toLowerCase()) {
+    if (SP_TONE[ch]) out += SP_TONE[ch][0];
+    else if (/[a-z]/.test(ch)) out += ch;
+  }
+  return out;
+}
+
+function spStripPunct(s) {
+  return (s || '').replace(/[\s.,!?;:'"“”‘’()（）、。，！？；：…·\-—~～「」『』\[\]]/g, '');
+}
+
+function spKataToHira(s) {
+  return s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+}
+
+function spLev(a, b) {
+  const m = a.length, n = b.length;
+  const d = Array.from({ length: m + 1 }, (_, i) => [i].concat(new Array(n).fill(0)));
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
+
+// 인식기가 "18"처럼 아라비아 숫자로 적어 주는 경우를 중국어 숫자로 바꿔서 비교
+function spNumToZh(s) {
+  const d = '零一二三四五六七八九';
+  const digits = x => [...x].map(c => d[+c]).join('');
+  if (s.length > 1 && s[0] === '0') return digits(s);
+  const n = parseInt(s, 10);
+  if (isNaN(n)) return s;
+  if (n < 10) return d[n];
+  if (n < 20) return '十' + (n % 10 ? d[n % 10] : '');
+  if (n < 100) return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : '');
+  if (n < 1000) {
+    const h = Math.floor(n / 100), r = n % 100;
+    if (r === 0) return d[h] + '百';
+    if (r < 10) return d[h] + '百零' + d[r];
+    return d[h] + '百' + (r < 20 ? '一' : '') + spNumToZh(String(r));
+  }
+  if (n < 10000) {
+    const q = Math.floor(n / 1000), r = n % 1000;
+    if (r === 0) return d[q] + '千';
+    if (r < 100) return d[q] + '千零' + spNumToZh(String(r));
+    return d[q] + '千' + spNumToZh(String(r));
+  }
+  return digits(s);
+}
+
+// 한자 배열 → 글자별 병음(음절·성조)
+function spZhSyl(hanzi) {
+  if (typeof pinyinPro === 'undefined' || !hanzi) return null;
+  try {
+    const arr = pinyinPro.pinyin(hanzi, { toneType: 'num', type: 'array' });
+    if (arr.length !== [...hanzi].length) return null;
+    return arr.map(p => {
+      const m = p.match(/[0-5]/);
+      return { b: p.replace(/[0-5]/g, '').replace(/ü/g, 'v'), t: (m && m[0] !== '5') ? m[0] : '0' };
+    });
+  } catch (e) { return null; }
+}
+
+// 편집거리 정렬: 글자(단어)별 점수(credit)를 돌려줌
+function spAlign(tU, rU, cost) {
+  const n = tU.length, m = rU.length;
+  const D = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++) D[i][0] = i;
+  for (let j = 1; j <= m; j++) D[0][j] = j;
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++)
+    D[i][j] = Math.min(D[i - 1][j] + 1, D[i][j - 1] + 1, D[i - 1][j - 1] + cost(tU[i - 1], rU[j - 1]));
+  const credit = new Array(n).fill(0);
+  const pair = new Array(n).fill(-1);
+  let i = n, j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0) {
+      const c = cost(tU[i - 1], rU[j - 1]);
+      if (Math.abs(D[i][j] - (D[i - 1][j - 1] + c)) < 1e-9) { credit[i - 1] = 1 - c; pair[i - 1] = j - 1; i--; j--; continue; }
+    }
+    if (i > 0 && Math.abs(D[i][j] - (D[i - 1][j] + 1)) < 1e-9) { credit[i - 1] = 0; i--; continue; }
+    j--;
+  }
+  return { dist: D[n][m], credit, pair };
+}
+
+const SP_TONE_NAME = {
+  '1': '1성(높고 평평하게)', '2': '2성(쑥 올라가게)', '3': '3성(푹 내려갔다 올라가게)',
+  '4': '4성(뚝 떨어지게)', '0': '경성(가볍고 짧게)'
+};
+
+function spMark(ch) {
+  try { return pinyinPro.pinyin(ch); } catch (e) { return ''; }
+}
+
+// 아쉬운 글자마다 한국어 안내문 만들기 (최대 4개)
+function spNotes(lang, tU, rU, a) {
+  const notes = [];
+  tU.forEach((u, i) => {
+    if (a.credit[i] >= 0.85 || notes.length >= 4) return;
+    const r = a.pair[i] >= 0 ? rU[a.pair[i]] : null;
+    const py = lang === 'zh' ? spMark(u.show) : '';
+    const label = lang === 'zh' ? `${u.show}(${py})` : u.show;
+    if (!r) { notes.push({ lv: 'miss', t: `<b>${spEsc(label)}</b> — 빠졌거나 소리가 인식되지 않았어요. 끝까지 또박또박 읽어 보세요.` }); return; }
+    if (lang === 'zh' && u.s && r.s && u.s.b === r.s.b && u.s.t !== r.s.t) {
+      notes.push({ lv: 'close', t: `<b>${spEsc(label)}</b> — 정답은 ${SP_TONE_NAME[u.s.t]}인데, ${SP_TONE_NAME[r.s.t]} 들렸어요.` });
+    } else {
+      const heardTxt = lang === 'zh' ? `${r.c}(${spMark(r.c)})` : r.c;
+      notes.push({ lv: 'miss', t: `<b>${spEsc(label)}</b> — <b>${spEsc(heardTxt)}</b>처럼 들렸어요. 입 모양과 소리를 다시 확인해 보세요.` });
+    }
+  });
+  return notes;
+}
+
+// 핵심: 인식된 문장(heard)을 원문(item)과 비교해 0~100점과 글자별 결과를 만든다
+function evaluateSpeech(item, heardRaw) {
+  const lang = item.language;
+  const heard = (heardRaw || '').replace(/\d+/g, m => lang === 'zh' ? spNumToZh(m) : m);
+  const text = item.text || '';
+  let tU, rU, cost, joiner = '';
+
+  if (lang === 'zh' && !SP_HANZI.test(text)) {
+    // 병음 전용 콘텐츠: 인식된 한자를 병음으로 바꿔 알파벳 단위로 비교 (성조는 보지 않음)
+    const tgt = spPinyinBase(text);
+    let rec = '';
+    if (typeof pinyinPro !== 'undefined') {
+      const hz = [...heard].filter(c => SP_HANZI.test(c)).join('');
+      if (hz) rec = pinyinPro.pinyin(hz, { toneType: 'none', type: 'array' }).join('').replace(/ü/g, 'v').toLowerCase().replace(/[^a-z]/g, '');
+    }
+    const a = spAlign([...tgt].map(c => ({ c })), [...rec].map(c => ({ c })), (x, y) => x.c === y.c ? 0 : 1);
+    return { score: Math.round(Math.max(0, 1 - a.dist / Math.max(tgt.length, 1)) * 100), heard: heardRaw, units: null, joiner: '', notes: [] };
+  }
+
+  if (lang === 'zh') {
+    const tChars = [...text].filter(c => SP_HANZI.test(c));
+    const rChars = [...heard].filter(c => SP_HANZI.test(c));
+    const ts = spZhSyl(tChars.join(''));
+    const rs = rChars.length ? spZhSyl(rChars.join('')) : [];
+    tU = tChars.map((c, i) => ({ c, show: c, s: ts ? ts[i] : null }));
+    rU = rChars.map((c, i) => ({ c, s: rs ? rs[i] : null }));
+    cost = (a, b) => {
+      if (a.c === b.c) return 0;
+      if ((a.c === '二' && b.c === '两') || (a.c === '两' && b.c === '二')) return 0.2;
+      if (a.s && b.s && a.s.b === b.s.b) {
+        // 같은 소리인데 글자만 다르면 거의 정답, 성조만 다르면 부분 점수
+        return (a.s.t === b.s.t || a.s.t === '0' || b.s.t === '0') ? 0.1 : 0.4;
+      }
+      return 1;
+    };
+  } else if (lang === 'en') {
+    const toU = s => (s || '').split(/\s+/).map(w => ({ show: w, c: w.toLowerCase().replace(/[^a-z0-9']/g, '') })).filter(u => u.c);
+    tU = toU(text);
+    rU = toU(heard);
+    joiner = ' ';
+    cost = (a, b) => {
+      if (a.c === b.c) return 0;
+      return spLev(a.c, b.c) / Math.max(a.c.length, b.c.length) <= 0.34 ? 0.3 : 1; // 철자 한 글자 차이는 비슷한 소리로 인정
+    };
+  } else {
+    tU = [...text].filter(ch => spStripPunct(ch) !== '').map(ch => ({ show: ch, c: spKataToHira(ch) }));
+    rU = [...heard].filter(ch => spStripPunct(ch) !== '').map(ch => ({ c: spKataToHira(ch) }));
+    cost = (a, b) => a.c === b.c ? 0 : 1;
+  }
+
+  const a = spAlign(tU, rU, cost);
+  const score = Math.round(Math.max(0, 1 - a.dist / Math.max(tU.length, 1)) * 100);
+  return { score, heard: heardRaw, joiner, notes: spNotes(lang, tU, rU, a), units: tU.map((u, i) => ({ show: u.show, credit: a.credit[i] })) };
+}
+
+function spErrMsg(code) {
+  const m = {
+    'not-allowed': '마이크 권한이 꺼져 있어요. 주소창 왼쪽 자물쇠 아이콘에서 마이크를 허용해 주세요.',
+    'service-not-allowed': '마이크 권한이 꺼져 있어요. 주소창 왼쪽 자물쇠 아이콘에서 마이크를 허용해 주세요.',
+    'no-speech': '목소리가 들리지 않았어요. 마이크 가까이에서 조금 더 크게 읽어 볼까요?',
+    'audio-capture': '마이크를 찾을 수 없어요. 마이크 연결을 확인해 주세요.',
+    'network': '인터넷 연결이 불안정해요. 연결을 확인하고 다시 시도해 주세요.'
+  };
+  return m[code] || '인식에 문제가 생겼어요. 한 번 더 시도해 주세요.';
+}
+
+function spVerdict(score) {
+  if (score >= 90) return '완벽해요! 🎉';
+  if (score >= 75) return '아주 좋아요! 👏';
+  if (score >= 60) return '좋아요, 통과! 👍';
+  if (score >= 35) return '조금만 더! 다시 한 번 읽어 볼까요? 💪';
+  return '괜찮아요, 🔊를 듣고 다시 도전해 봐요 🙂';
+}
+
+function renderSpeak(item) {
+  const st = S.speakState || 'idle';
+  const res = S.speakResult;
+  const hasPinyin = item.pinyin && !item.pinyinOnly;
+
+  let targetHtml = spEsc(item.text);
+  if (st === 'result' && res && res.units) {
+    targetHtml = res.units.map(u =>
+      `<span class="sp-ch ${u.credit >= 0.85 ? 'ok' : u.credit >= 0.5 ? 'close' : 'miss'}">${spEsc(u.show)}</span>`
+    ).join(res.joiner);
+  }
+
+  let body = '';
+  let footer = `<button class="btn btn-outline btn-sm" onclick="_speakNext(true)">건너뛰기</button>`;
+
+  if (!SR) {
+    body = `<div class="sp-note">이 브라우저에서는 음성 인식을 쓸 수 없어요.<br>안드로이드는 <b>크롬</b>, 아이폰은 <b>사파리</b>(설정 → Siri 및 받아쓰기 켜기)로 접속해 주세요.</div>`;
+  } else if (st === 'listening') {
+    body = `<div class="sp-mic-wrap">
+      <button class="mic-btn live" onclick="_speakStart()">⏹</button>
+      <div class="mic-hint">듣고 있어요… 다 읽었으면 버튼을 한 번 더 눌러 주세요</div>
+      <div id="sp-live" class="sp-live"></div>
+    </div>`;
+  } else if (st === 'result' && res) {
+    const pass = res.score >= 60;
+    const color = pass ? 'var(--green)' : 'var(--amber-dark)';
+    body = `<div class="sp-result">
+      <div class="sp-score" style="color:${color}">${res.score}<small>점</small></div>
+      <div class="sp-msg">${spVerdict(res.score)}</div>
+      <div class="sp-heard">인식된 소리: <strong>${spEsc(res.heard)}</strong></div>
+      ${res.units ? `<div class="sp-legend"><span class="sp-ch ok">초록</span> 정확 · <span class="sp-ch close">주황</span> 성조/비슷한 소리 · <span class="sp-ch miss">빨강</span> 다시 확인</div>` : ''}
+      ${res.notes && res.notes.length ? `<div class="sp-notes"><div class="sp-notes-h">💡 아쉬운 부분</div>${res.notes.map(n => `<div class="sp-note-i ${n.lv}">${n.t}</div>`).join('')}<div class="sp-notes-f">※ 음성 인식 결과를 바탕으로 한 참고용 피드백이에요</div></div>` : ''}
+    </div>`;
+    footer = `<button class="btn btn-outline" onclick="_speakRetry()">🎤 다시 해보기</button>
+      <button class="btn btn-primary" onclick="_speakNext(false)">다음 →</button>`;
+  } else {
+    const err = st === 'error' ? `<div class="sp-note">${spErrMsg(S.speakErr)}</div>` : '';
+    body = `${err}<div class="sp-mic-wrap">
+      <button class="mic-btn" onclick="_speakStart()">🎤</button>
+      <div class="mic-hint">버튼을 누르고 문장을 읽어 보세요</div>
+    </div>`;
+  }
+
+  return `
+    <div class="ex-top">
+      <span style="font-size:.83rem;color:var(--gray)">🔊로 먼저 듣고, 마이크에 대고 따라 읽어 보세요</span>
+      <button class="audio-btn" onclick="_playItemById('${item.id}')">🔊</button>
+    </div>
+    ${hasPinyin ? `<div class="pinyin-line">${spEsc(item.pinyin)}</div>` : ''}
+    <div class="sp-target">${targetHtml}</div>
+    ${item.meaning ? `<div class="meaning-line">뜻: ${spEsc(item.meaning)}</div>` : ''}
+    ${body}
+    <div class="ex-actions" style="margin-top:22px">${footer}</div>`;
+}
+
+window._speakStart = () => {
+  const item = S.exItems[S.exIdx];
+  if (!SR) { render(); return; }
+  if (S.speakState === 'listening') { try { _rec.stop(); } catch (e) {} return; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  const rec = new SR();
+  rec.lang = LANG_CODE[item.language] || 'zh-CN';
+  rec.interimResults = true;
+  rec.continuous = false;
+  rec.maxAlternatives = 1;
+  let finalText = '';
+  rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    rec._last = finalText + interim;
+    const live = document.getElementById('sp-live');
+    if (live) live.textContent = rec._last;
+  };
+  rec.onerror = e => { rec._err = e.error; };
+  rec.onend = () => {
+    if (_rec !== rec) return;
+    if (!(S.view === 'student' && S.studentStep === 'practice' && S.exType === 'speak')) return;
+    const heard = (finalText || rec._last || '').trim();
+    if (!heard) {
+      S.speakState = 'error';
+      S.speakErr = rec._err || 'no-speech';
+    } else {
+      S.speakResult = evaluateSpeech(item, heard);
+      if (S.speakBest === null || S.speakResult.score > S.speakBest) S.speakBest = S.speakResult.score;
+      S.speakState = 'result';
+    }
+    render();
+  };
+
+  _rec = rec;
+  try {
+    rec.start();
+  } catch (e) {
+    _rec = null;
+    S.speakState = 'error';
+    S.speakErr = 'start-failed';
+    render();
+    return;
+  }
+  S.speakState = 'listening';
+  S.speakErr = '';
+  render();
+};
+
+window._speakRetry = () => {
+  S.speakState = 'idle';
+  S.speakResult = null;
+  render();
+};
+
+// 가장 높은 점수가 60점 이상이면 정답으로 기록한 뒤 다음 문제로
+window._speakNext = (skip) => {
+  if (!skip && S.speakBest !== null) {
+    const ok = S.speakBest >= 60;
+    if (ok) S.exScore++;
+    recordResult(ok);
+  }
+  _next();
+};
+
 // ── DONE ─────────────────────────────────────
 function renderDone() {
   const total = S.exItems.length;
@@ -1747,7 +2136,7 @@ function renderDone() {
     <div class="done-card">
       <div style="font-size:3.5rem;margin-bottom:14px">${emoji}</div>
       <h2 style="font-size:1.3rem;color:var(--navy);margin-bottom:4px">${st.name}님, 수고하셨어요!</h2>
-      <p style="color:var(--gray);font-size:.85rem;margin-bottom:24px">${{word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드'}[S.exType]} 완료</p>
+      <p style="color:var(--gray);font-size:.85rem;margin-bottom:24px">${{word:'단어 배열',blank:'빈칸 채우기',flash:'플래시카드',meaning:'뜻 보고 찾기',speak:'발음 연습'}[S.exType]} 완료</p>
       <div class="done-pct" style="color:${color}">${pct}%</div>
       <p style="color:var(--gray);margin:8px 0 18px;font-size:.88rem">${total}문제 중 ${S.exScore}개 정답</p>
       <div class="progress-bar" style="margin-bottom:24px">
